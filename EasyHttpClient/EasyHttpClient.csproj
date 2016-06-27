@@ -65,6 +65,8 @@
     <Compile Include="Attributes\HttpMethod\HttpPostAttribute.cs" />
     <Compile Include="Attributes\HttpMethod\HttpGetAttribute.cs" />
     <Compile Include="Attributes\HttpMethod\IHttpMethodAttribute.cs" />
+    <Compile Include="Attributes\Parameter\HttpAliasAttribute.cs" />
+    <Compile Include="Attributes\Parameter\HttpIgnoreAttribute.cs" />
     <Compile Include="Attributes\Parameter\RawContentAttribute.cs" />
     <Compile Include="Attributes\Parameter\CookieAttribute.cs" />
     <Compile Include="Attributes\Route\RoutePrefixAttribute.cs" />

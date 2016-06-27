@@ -15,7 +15,7 @@ namespace EasyHttpClient.Attributes
         JObject, JArray
     }
 
-    [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = true)]
+    [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false)]
     public class JsonBodyAttribute : Attribute, IParameterAttribute
     {
         public ParameterScope Scope

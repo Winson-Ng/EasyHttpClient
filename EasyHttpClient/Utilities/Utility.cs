@@ -1,10 +1,12 @@
-﻿using System;
+﻿using EasyHttpClient.Attributes.Parameter;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
+using System.Reflection;
 
 namespace EasyHttpClient.Utilities
 {
@@ -16,7 +18,8 @@ namespace EasyHttpClient.Utilities
                 return Enumerable.Empty<KeyValuePair<string, string>>();
 
 
-            Func<object, string> autoEncodeParameter=(val)=>{
+            Func<object, string> autoEncodeParameter = (val) =>
+            {
                 return Convert.ToString(val, CultureInfo.InvariantCulture);
                 //return urlEncode?HttpUtility.UrlEncode(valStr):valStr;
             };
@@ -40,10 +43,20 @@ namespace EasyHttpClient.Utilities
             {
                 foreach (var p in paramType.GetProperties())
                 {
+                    if (p.IsDefined(typeof(HttpIgnoreAttribute)))
+                    {
+                        continue;
+                    }
+                    var pName = p.Name;
+                    var pNameAttr = p.GetCustomAttribute<HttpAliasAttribute>();
+                    if (pNameAttr != null && !string.IsNullOrWhiteSpace(pNameAttr.Name))
+                    {
+                        pName = pNameAttr.Name;
+                    }
                     var propertyValue = p.GetValue(value);
                     if (propertyValue != null)
                     {
-                        kps.AddRange(ExtractUrlParameter(p.Name, propertyValue, deep--));
+                        kps.AddRange(ExtractUrlParameter(pName, propertyValue, deep--));
                     }
                 }
             }

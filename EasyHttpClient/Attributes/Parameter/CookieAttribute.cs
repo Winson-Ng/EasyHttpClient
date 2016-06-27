@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace EasyHttpClient.Attributes
 {
-    [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = true)]
+    [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false)]
     public class CookieAttribute : Attribute, IParameterAttribute
     {
         public ParameterScope Scope
