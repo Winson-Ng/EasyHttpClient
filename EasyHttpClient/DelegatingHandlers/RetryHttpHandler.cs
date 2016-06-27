@@ -8,11 +8,11 @@ using EasyHttpClient.Utilities;
 
 namespace EasyHttpClient.DelegatingHandlers
 {
-    public class RetryHandler : DelegatingHandler
+    public class RetryHttpHandler : DelegatingHandler
     {
         private int _maxRetries;
 
-        public RetryHandler(int maxRetries)
+        public RetryHttpHandler(int maxRetries)
         {
             this._maxRetries = maxRetries;
         }

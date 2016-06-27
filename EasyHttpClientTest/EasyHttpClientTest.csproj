@@ -55,7 +55,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="OAuth2ClientProvider.cs" />
+    <Compile Include="OAuth2ClientHandler.cs" />
     <Compile Include="ApiClients\OAuthApiClient.cs" />
     <Compile Include="ApiClients\TestApiClient.cs" />
     <Compile Include="Program.cs" />

@@ -9,10 +9,10 @@ using System.Threading.Tasks;
 
 namespace EasyHttpClient.DelegatingHandlers
 {
-    public class OAuth2Handler : DelegatingHandler
+    public class OAuth2HttpHandler : DelegatingHandler
     {
-        private readonly IOAuth2ClientProvider _oauth2ClientProvider;
-        public OAuth2Handler(IOAuth2ClientProvider oauth2ClientProvider)
+        private readonly IOAuth2ClientHandler _oauth2ClientProvider;
+        public OAuth2HttpHandler(IOAuth2ClientHandler oauth2ClientProvider)
         {
             _oauth2ClientProvider = oauth2ClientProvider;
         }

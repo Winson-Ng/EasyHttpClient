@@ -18,7 +18,7 @@ namespace EasyHttpClient
                 NullValueHandling = NullValueHandling.Ignore,
                 ContractResolver = new CamelCasePropertyNamesContractResolver()
             };
-        public IOAuth2ClientProvider OAuth2ClientProvider { get; set; }
+        public IOAuth2ClientHandler OAuth2ClientProvider { get; set; }
         public int MaxRetry { get; set; }
         private JsonSerializerSettings _jsonSerializerSettings;
         public JsonSerializerSettings JsonSerializerSettings
@@ -62,12 +62,12 @@ namespace EasyHttpClient
 
             if (this.HttpClientSettings.MaxRetry > 0)
             {
-                handlers.Add(new RetryHandler(this.HttpClientSettings.MaxRetry));
+                handlers.Add(new RetryHttpHandler(this.HttpClientSettings.MaxRetry));
             }
 
             if (this.HttpClientSettings.OAuth2ClientProvider != null)
             {
-                handlers.Add(new OAuth2Handler(this.HttpClientSettings.OAuth2ClientProvider));
+                handlers.Add(new OAuth2HttpHandler(this.HttpClientSettings.OAuth2ClientProvider));
             }
 
             var client = HttpClientProvider.GetClient(handlers.ToArray());

@@ -12,6 +12,14 @@ namespace EasyHttpClient.Attributes
     [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false)]
     public class CookieAttribute : Attribute, IParameterAttribute
     {
+        public CookieAttribute() { 
+        
+        }
+        public CookieAttribute(string name)
+        {
+            this.Name = name;
+        }
+
         public ParameterScope Scope
         {
             get

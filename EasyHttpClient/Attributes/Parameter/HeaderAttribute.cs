@@ -11,6 +11,13 @@ namespace EasyHttpClient.Attributes
     [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false)]
     public class HeaderAttribute : Attribute, IParameterAttribute
     {
+        public HeaderAttribute() { 
+        
+        }
+        public HeaderAttribute(string name) {
+            this.Name = name;
+        }
+
         public ParameterScope Scope
         {
             get

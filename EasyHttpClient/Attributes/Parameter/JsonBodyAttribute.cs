@@ -18,6 +18,17 @@ namespace EasyHttpClient.Attributes
     [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false)]
     public class JsonBodyAttribute : Attribute, IParameterAttribute
     {
+        public JsonBodyAttribute()
+            : this(null)
+        {
+
+        }
+        public JsonBodyAttribute(string name)
+        {
+            this.Name = name;
+            this.JTokenType = JTokenType.JObject;
+        }
+
         public ParameterScope Scope
         {
             get
@@ -35,10 +46,6 @@ namespace EasyHttpClient.Attributes
         {
             get;
             set;
-        }
-        public JsonBodyAttribute()
-        {
-            this.JTokenType = JTokenType.JObject;
         }
         private static readonly JsonMergeSettings JsonMergeSettings = new JsonMergeSettings()
         {

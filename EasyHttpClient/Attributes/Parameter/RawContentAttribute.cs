@@ -12,6 +12,14 @@ namespace EasyHttpClient.Attributes
     [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false)]
     public class RawContentAttribute : Attribute, IParameterAttribute
     {
+        public RawContentAttribute() { 
+        
+        }
+        public RawContentAttribute(string name)
+        {
+            this.Name = name;
+        }
+
         public ParameterScope Scope
         {
             get

@@ -11,6 +11,14 @@ namespace EasyHttpClient.Attributes
     [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false)]
     public class QueryStringAttribute : Attribute, IParameterAttribute
     {
+        public QueryStringAttribute() { 
+        
+        }
+        public QueryStringAttribute(string name)
+        {
+            this.Name = name;
+        }
+
         public ParameterScope Scope
         {
             get

@@ -22,7 +22,7 @@ namespace EasyHttpClientTest
             factory.HttpClientSettings.MaxRetry = 3;
 
             var oauthApiClient = new HttpClientWrapperFactory().CreateFor<OAuthApiClient>(host);
-            var oauth2ClientProvider = new OAuth2ClientProvider(oauthApiClient);
+            var oauth2ClientProvider = new OAuth2ClientHandler(oauthApiClient);
             factory.HttpClientSettings.OAuth2ClientProvider = oauth2ClientProvider;
 
             oauth2ClientProvider.Login();

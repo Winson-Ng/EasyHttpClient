@@ -13,6 +13,14 @@ namespace EasyHttpClient.Attributes
     [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false)]
     public class FormBodyAttribute : Attribute, IParameterAttribute
     {
+        public FormBodyAttribute() { 
+        
+        }
+        public FormBodyAttribute(string name)
+        {
+            this.Name = name;
+        }
+
         public ParameterScope Scope
         {
             get

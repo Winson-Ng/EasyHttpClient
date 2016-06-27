@@ -82,7 +82,7 @@
     <Compile Include="Attributes\Parameter\PathParamAttribute.cs" />
     <Compile Include="Attributes\Parameter\QueryStringAttribute.cs" />
     <Compile Include="Attributes\Parameter\IParameterAttribute.cs" />
-    <Compile Include="IOAuth2ClientProvider.cs" />
+    <Compile Include="IOAuth2ClientHandler.cs" />
     <Compile Include="Utilities\HttpRequestMessageBuilder.cs" />
     <Compile Include="Utilities\HttpResponseMessageParser.cs" />
     <Compile Include="IHttpResult.cs" />
