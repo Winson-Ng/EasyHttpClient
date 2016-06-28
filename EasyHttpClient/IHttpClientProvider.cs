@@ -10,12 +10,12 @@ namespace EasyHttpClient
 {
     public interface IHttpClientProvider
     {
-        HttpClient GetClient(params DelegatingHandler[] handlers);
+        HttpClient GetClient(HttpClientSettings clientSetting, params DelegatingHandler[] handlers);
     }
 
-    public class DefaultHttpClientProvider : IHttpClientProvider {
-
-        public HttpClient GetClient(params DelegatingHandler[] handlers)
+    public class DefaultHttpClientProvider : IHttpClientProvider
+    {
+        public virtual HttpClient GetClient(HttpClientSettings clientSetting, params DelegatingHandler[] handlers)
         {
             return HttpClientFactory.Create(handlers);
         }

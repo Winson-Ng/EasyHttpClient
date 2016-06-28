@@ -18,9 +18,8 @@ namespace EasyHttpClient
                 NullValueHandling = NullValueHandling.Ignore,
                 ContractResolver = new CamelCasePropertyNamesContractResolver()
             };
-        public IOAuth2ClientHandler OAuth2ClientProvider { get; set; }
+        public IOAuth2ClientHandler OAuth2ClientHandler { get; set; }
         public int MaxRetry { get; set; }
-        private JsonSerializerSettings _jsonSerializerSettings;
         public JsonSerializerSettings JsonSerializerSettings
         {
             get;
@@ -46,6 +45,20 @@ namespace EasyHttpClient
             HttpClientProvider = new DefaultHttpClientProvider();
         }
 
+        #region Type parameter
+
+        public object CreateFor(Type objectType)
+        {
+            return CreateFor(objectType, DefaultHost);
+        }
+
+        public object CreateFor(Type objectType, string host)
+        {
+            return CreateFor(objectType, new Uri(host));
+        }
+        #endregion
+
+        #region GenericType
         public T CreateFor<T>()
         {
             return CreateFor<T>(DefaultHost);
@@ -58,6 +71,11 @@ namespace EasyHttpClient
 
         public T CreateFor<T>(Uri host)
         {
+            return (T)CreateFor(typeof(T), host);
+        }
+        #endregion
+        public object CreateFor(Type type, Uri host)
+        {
             var handlers = new List<DelegatingHandler>();
 
             if (this.HttpClientSettings.MaxRetry > 0)
@@ -65,15 +83,10 @@ namespace EasyHttpClient
                 handlers.Add(new RetryHttpHandler(this.HttpClientSettings.MaxRetry));
             }
 
-            if (this.HttpClientSettings.OAuth2ClientProvider != null)
-            {
-                handlers.Add(new OAuth2HttpHandler(this.HttpClientSettings.OAuth2ClientProvider));
-            }
+            var client = HttpClientProvider.GetClient(this.HttpClientSettings, handlers.ToArray());
+            var proxyClass = new HttpClientWrapper(type, client, host, this.HttpClientSettings);
 
-            var client = HttpClientProvider.GetClient(handlers.ToArray());
-            var proxyClass = new HttpClientWrapper<T>(client, host, this.HttpClientSettings);
-
-            return (T)proxyClass.GetTransparentProxy();
+            return proxyClass.GetTransparentProxy();
         }
     }
 }

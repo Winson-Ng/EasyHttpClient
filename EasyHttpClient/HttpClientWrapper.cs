@@ -7,6 +7,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Formatting;
 using System.Net.Http.Headers;
@@ -22,7 +23,22 @@ using System.Web.Http;
 
 namespace EasyHttpClient
 {
-    internal class HttpClientWrapper<T> : RealProxy
+    public class HttpClientWrapper<T> : HttpClientWrapper {
+        public HttpClientWrapper(
+            HttpClient httpClient, 
+            Uri host,
+            HttpClientSettings httpClientSettings)
+            : base(typeof(T), httpClient, host, httpClientSettings)
+        {
+        }
+
+        public new T GetTransparentProxy() {
+            return (T)base.GetTransparentProxy();
+        } 
+    }
+
+
+    public class HttpClientWrapper : RealProxy
     {
         private readonly MethodInfo CastTaskMethod = typeof(EasyHttpClient.Utilities.TaskExtensions).GetMethod("CastTask");
 
@@ -37,17 +53,19 @@ namespace EasyHttpClient
         private HttpClientSettings _httpClientSettings;
         private Uri _host;
         private bool _authorizeRequired;
+        private Type _objectType;
         //private IHttpClientProvider _httpClientProvider { get; set; }
 
-        internal HttpClientWrapper(
+        public HttpClientWrapper(
+            Type objectType,
             HttpClient httpClient,
             //IHttpClientProvider httpClientProvider, 
             Uri host,
             HttpClientSettings httpClientSettings)
-            : base(typeof(T))
+            : base(objectType)
         {
-            var objectType = typeof(T);
             _httpClient = httpClient;
+            _objectType = objectType;
             //_httpClientProvider = httpClientProvider;
             _host = host;
             _httpClientSettings = httpClientSettings;
@@ -72,7 +90,7 @@ namespace EasyHttpClient
                 //var _httpClient = this._httpClientProvider.GetClient();
                 if (methodCall == null)
                 {
-                    throw new NotSupportedException(string.Format(MsgException, typeof(T).ToString(), "Allow method call only!"));
+                    throw new NotSupportedException(string.Format(MsgException, _objectType.ToString(), "Allow method call only!"));
                 }
                 var methodInfo = methodCall.MethodBase as MethodInfo;
 
@@ -127,7 +145,26 @@ namespace EasyHttpClient
                     httpMessage.Properties.Remove("AuthorizeRequired");
                 }
 
-                var httpRequestTask = _httpClient.SendAsync(httpMessage); //AutoRetryRequest(_httpClient, httpMessage, _httpClientSettings.AutoRetryLimit);
+                Task<HttpResponseMessage> httpRequestTask;
+                if(parameters.AuthorizeRequired && _httpClientSettings.OAuth2ClientHandler != null)
+                {
+                    httpRequestTask = _httpClientSettings.OAuth2ClientHandler.SetAccessToken(httpMessage)
+                        .ContinueWith(t=> _httpClient.SendAsync(httpMessage))
+                        .ContinueWith(async t =>{
+                            var response = await t.Unwrap();
+                            if (response.StatusCode == HttpStatusCode.Unauthorized)
+                            {
+                                var newMessage=httpMessage.Clone();
+                                if (await _httpClientSettings.OAuth2ClientHandler.RefreshAccessToken(newMessage))
+                                {
+                                    response = await _httpClient.SendAsync(newMessage);
+                                }
+                            }
+                            return response;
+                        }).Unwrap();           
+                }else{
+                    httpRequestTask = _httpClient.SendAsync(httpMessage);
+                }
 
                 var returnType = methodInfo.ReturnType;
                 if (returnType.IsGenericType && returnType.IsSubclassOf(typeof(Task)))
@@ -161,46 +198,6 @@ namespace EasyHttpClient
             {
                 return new ReturnMessage(ex, methodCall);
             }
-        }
-
-
-        public Task<HttpResponseMessage> AutoRetryRequest(HttpClient httpClient, HttpRequestMessage httpMessage, int retryLimit)
-        {
-            return httpClient.SendAsync(httpMessage).ContinueWith(async t =>
-            {
-                if (retryLimit-- > 0)
-                {
-                    var toRetry = false;
-                    if (t.IsFaulted)
-                    {
-                        if (t.Exception.InnerExceptions != null)
-                        {
-                            foreach (var e in t.Exception.InnerExceptions)
-                            {
-                                if (e is HttpRequestException)
-                                {
-                                    toRetry = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    else
-                    {
-                        var r = await t;
-                        if ((int)r.StatusCode > 500)
-                        {
-                            toRetry = true;
-                        }
-                    }
-
-                    if (toRetry)
-                    {
-                        return await AutoRetryRequest(httpClient, httpMessage.Clone(), retryLimit);
-                    }
-                }
-                return await t;
-            }).Unwrap();
         }
 
         private async Task<object> ParseResult(Task<HttpResponseMessage> requestTask, Type returnType)
@@ -237,14 +234,14 @@ namespace EasyHttpClient
 
                         if (routeAttribute == null)
                         {
-                            throw new NotSupportedException(string.Format(MsgMissingSomethingOn, typeof(T).ToString(), typeof(RouteAttribute).ToString(), methodInfo.ToString()));
+                            throw new NotSupportedException(string.Format(MsgMissingSomethingOn, _objectType.ToString(), typeof(RouteAttribute).ToString(), methodInfo.ToString()));
                         }
 
                         var httpMethodAttribute = methodInfo.GetCustomAttributes().FirstOrDefault(t => t is IHttpMethodAttribute) as IHttpMethodAttribute;
 
                         if (httpMethodAttribute == null)
                         {
-                            throw new NotSupportedException(string.Format(MsgMissingSomethingOn, typeof(T).ToString(), typeof(IHttpMethodAttribute).ToString(), methodInfo.ToString()));
+                            throw new NotSupportedException(string.Format(MsgMissingSomethingOn, _objectType.ToString(), typeof(IHttpMethodAttribute).ToString(), methodInfo.ToString()));
                         }
 
                         var httpMethod = httpMethodAttribute.HttpMethod;

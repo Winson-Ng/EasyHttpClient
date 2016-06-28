@@ -14,7 +14,17 @@ namespace EasyHttpClient.Utilities
     {
         public static async Task<IHttpResult> ParseAsHttpResult(this HttpResponseMessage responseMessage, Type returnType, IEnumerable<MediaTypeFormatter> mediaTypeFormatters)
         {
-            var httpResult = (IHttpResult)Activator.CreateInstance(returnType);
+            HttpResult httpResult = null;
+            if (returnType.IsGenericType)
+            {
+                returnType = returnType.GenericTypeArguments[0];
+                httpResult = (HttpResult)Activator.CreateInstance(typeof(HttpResult<>).MakeGenericType(returnType));
+            }
+            else
+            {
+                httpResult = new HttpResult();
+            }
+
             httpResult.Headers = responseMessage.Headers;
             httpResult.IsSuccessStatusCode = responseMessage.IsSuccessStatusCode;
             httpResult.ReasonPhrase = responseMessage.ReasonPhrase;
@@ -24,23 +34,21 @@ namespace EasyHttpClient.Utilities
 
             if (responseMessage.IsSuccessStatusCode)
             {
-                if (returnType.IsGenericType
-                    && returnType.GetGenericTypeDefinition() == typeof(HttpObjectResult<>))
-                {
-                    var objectType = returnType.GenericTypeArguments[0];
-                    httpResult.Content = await responseMessage.Content.ReadAsAsync(objectType, mediaTypeFormatters);
-                }
-                else if (typeof(HttpStringResult) == returnType)
+                if (typeof(string) == returnType)
                 {
                     httpResult.Content = await responseMessage.Content.ReadAsStringAsync();
                 }
-                else if (typeof(HttpStreamResult) == returnType)
+                else if (typeof(Stream) == returnType)
                 {
                     httpResult.Content = await responseMessage.Content.ReadAsStreamAsync();
                 }
-                else if (typeof(HttpBinaryResult) == returnType)
+                else if (typeof(byte[]) == returnType)
                 {
                     httpResult.Content = await responseMessage.Content.ReadAsByteArrayAsync();
+                }
+                else
+                {
+                    httpResult.Content = await responseMessage.Content.ReadAsAsync(returnType, mediaTypeFormatters);
                 }
             }
             else
@@ -50,9 +58,10 @@ namespace EasyHttpClient.Utilities
             return httpResult;
         }
 
-        public static async Task ParseAsVoid(this HttpResponseMessage responseMessage)
+        public static Task ParseAsVoid(this HttpResponseMessage responseMessage)
         {
             responseMessage.EnsureSuccessStatusCode();
+            return Task.FromResult(0);
         }
 
         public static async Task<object> ParseAsObject(this HttpResponseMessage responseMessage, Type returnType, IEnumerable<MediaTypeFormatter> mediaTypeFormatters)

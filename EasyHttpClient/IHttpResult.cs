@@ -11,97 +11,25 @@ using System.Threading.Tasks;
 
 namespace EasyHttpClient
 {
-    public interface IHttpResult
+    public interface IHttpResult<T> : IHttpResult
     {
-        string ErrorMessage { get; set; }
-        // Summary:
-        //     Gets or sets the content of a HTTP response message.
-        //
-        // Returns:
-        //     Returns System.Net.Http.HttpContent.The content of the HTTP response message.
-        object Content { get; set; }
-        //
-        // Summary:
-        //     Gets the collection of HTTP response headers.
-        //
-        // Returns:
-        //     Returns System.Net.Http.Headers.HttpResponseHeaders.The collection of HTTP
-        //     response headers.
-        HttpResponseHeaders Headers { get; set; }
-        //
-        // Summary:
-        //     Gets a value that indicates if the HTTP response was successful.
-        //
-        // Returns:
-        //     Returns System.Boolean.A value that indicates if the HTTP response was successful.
-        //     true if System.Net.Http.HttpResponseMessage.StatusCode was in the range 200-299;
-        //     otherwise false.
-        bool IsSuccessStatusCode { get; set; }
-        //
-        // Summary:
-        //     Gets or sets the reason phrase which typically is sent by servers together
-        //     with the status code.
-        //
-        // Returns:
-        //     Returns System.String.The reason phrase sent by the server.
-        string ReasonPhrase { get; set; }
-        //
-        // Summary:
-        //     Gets or sets the request message which led to this response message.
-        //
-        // Returns:
-        //     Returns System.Net.Http.HttpRequestMessage.The request message which led
-        //     to this response message.
-        //HttpRequestMessage RequestMessage { get; set; }
-        //
-        // Summary:
-        //     Gets or sets the status code of the HTTP response.
-        //
-        // Returns:
-        //     Returns System.Net.HttpStatusCode.The status code of the HTTP response.
-        HttpStatusCode StatusCode { get; set; }
-        //
-        // Summary:
-        //     Gets or sets the HTTP message version.
-        //
-        // Returns:
-        //     Returns System.Version.The HTTP message version. The default is 1.1.
-        Version Version { get; set; }
-
+        new T Content { get;}
     }
 
-    //public interface IHttpObjectResult<T> : IHttpResult
-    //{
-    //}
-
-    public class HttpObjectResult<T> : IHttpResult
+    public interface IHttpResult
     {
+        object Content { get; }
+        string ErrorMessage { get; }
+        HttpResponseHeaders Headers { get; }
+        bool IsSuccessStatusCode { get; }
+        string ReasonPhrase { get; }
+        HttpStatusCode StatusCode { get; }
+        Version Version { get; }
+    }
 
-        public T Content
-        {
-            get
-            {
-                return (T)_content;
-            }
-            set
-            {
-                _content = value;
-            }
-        }
 
-        private object _content;
-        object IHttpResult.Content
-        {
-            get
-            {
-                return _content;
-            }
-            set
-            {
-                _content = value;
-            }
-        }
-
+    internal class HttpResult : IHttpResult
+    {
         public HttpResponseHeaders Headers
         {
             get;
@@ -120,12 +48,6 @@ namespace EasyHttpClient
             set;
         }
 
-        //public HttpRequestMessage RequestMessage
-        //{
-        //    get;
-        //    set;
-        //}
-
         public HttpStatusCode StatusCode
         {
             get;
@@ -143,19 +65,26 @@ namespace EasyHttpClient
             get;
             set;
         }
+
+        public object Content
+        {
+            get;
+            set;
+        }
     }
 
-    public class HttpStringResult : HttpObjectResult<string>
+    internal class HttpResult<T> : HttpResult, IHttpResult<T>
     {
-
+        public new T Content
+        {
+            get
+            {
+                return (T)base.Content;
+            }
+             set
+            {
+                base.Content = value;
+            }
+        }
     }
-    public class HttpStreamResult : HttpObjectResult<Stream>
-    {
-    }
-
-    public class HttpBinaryResult : HttpObjectResult<byte[]>
-    {
-    }
-
-
 }

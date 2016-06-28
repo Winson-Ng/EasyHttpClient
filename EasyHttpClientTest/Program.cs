@@ -1,6 +1,5 @@
 ﻿using EasyHttpClient;
 using EasyHttpClientTest.ApiClients;
-using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,10 +21,10 @@ namespace EasyHttpClientTest
             factory.HttpClientSettings.MaxRetry = 3;
 
             var oauthApiClient = new HttpClientWrapperFactory().CreateFor<OAuthApiClient>(host);
-            var oauth2ClientProvider = new OAuth2ClientHandler(oauthApiClient);
-            factory.HttpClientSettings.OAuth2ClientProvider = oauth2ClientProvider;
+            var oauth2ClientHandler = new OAuth2ClientHandler(oauthApiClient);
+            factory.HttpClientSettings.OAuth2ClientHandler = oauth2ClientHandler;
 
-            oauth2ClientProvider.Login();
+            oauth2ClientHandler.Login();
 
             var testApiClient = factory.CreateFor<TestApiClient>();
             string line;

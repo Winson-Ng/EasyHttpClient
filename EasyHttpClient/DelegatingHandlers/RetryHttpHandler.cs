@@ -43,45 +43,5 @@ namespace EasyHttpClient.DelegatingHandlers
             }
             return await responseTask;
         }
-
-
-        public Task<HttpResponseMessage> AutoRetryRequest(HttpClient httpClient, HttpRequestMessage httpMessage, int retryLimit)
-        {
-            return httpClient.SendAsync(httpMessage).ContinueWith(async t =>
-            {
-                if (retryLimit-- > 0)
-                {
-                    var toRetry = false;
-                    if (t.IsFaulted)
-                    {
-                        if (t.Exception.InnerExceptions != null)
-                        {
-                            foreach (var e in t.Exception.InnerExceptions)
-                            {
-                                if (e is HttpRequestException)
-                                {
-                                    toRetry = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    else
-                    {
-                        var r = await t;
-                        if ((int)r.StatusCode > 500)
-                        {
-                            toRetry = true;
-                        }
-                    }
-
-                    if (toRetry)
-                    {
-                        return await AutoRetryRequest(httpClient, httpMessage.Clone(), retryLimit);
-                    }
-                }
-                return await t;
-            }).Unwrap();
-        }
     }
 }

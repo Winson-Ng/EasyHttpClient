@@ -71,8 +71,7 @@
     <Compile Include="Attributes\Parameter\CookieAttribute.cs" />
     <Compile Include="Attributes\Route\RoutePrefixAttribute.cs" />
     <Compile Include="Attributes\Route\RouteAttribute.cs" />
-    <Compile Include="DelegatingHandlers\OAuth2Handler.cs" />
-    <Compile Include="DelegatingHandlers\RetryHandler.cs" />
+    <Compile Include="DelegatingHandlers\RetryHttpHandler.cs" />
     <Compile Include="HttpClientWrapper.cs" />
     <Compile Include="HttpClientWrapperFactory.cs" />
     <Compile Include="IHttpClientProvider.cs" />
