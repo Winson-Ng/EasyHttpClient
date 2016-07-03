@@ -9,7 +9,7 @@ EasyHttpClient provide you an easy way to access HTTP resource(e.g. REST API cli
 
 #### Step 1, create your http client interface
 
-...
+...cs
 
     [RoutePrefix("api/value")]
     public interface TestApiClient
@@ -28,7 +28,7 @@ EasyHttpClient provide you an easy way to access HTTP resource(e.g. REST API cli
 
 #### Step 2, config the HttpClientWrapperFactory
 
-...
+...cs
 
     var factory = new HttpClientWrapperFactory()
     {
@@ -39,7 +39,7 @@ EasyHttpClient provide you an easy way to access HTTP resource(e.g. REST API cli
 
 #### Step 3, use in my code
 
-...
+...cs
 
     var testApiClient = factory.CreateFor<TestApiClient>();
     var val = testApiClient.GetValue("myname");
@@ -47,7 +47,7 @@ EasyHttpClient provide you an easy way to access HTTP resource(e.g. REST API cli
 ...
 
 ### Config OAuth2
-...
+...cs
 
     factory.HttpClientSettings.OAuth2ClientHandler = new MyOAuth2ClientHandler();
     
@@ -56,7 +56,7 @@ EasyHttpClient provide you an easy way to access HTTP resource(e.g. REST API cli
 
 ### Extend HttpClientProvider, to add my handlers on System.Net.Http.HttpClient class
 
-...
+...cs
 
     factory.HttpClientProvider = new HttpClientProvider();
     
@@ -64,7 +64,7 @@ EasyHttpClient provide you an easy way to access HTTP resource(e.g. REST API cli
 
 ### Extend EasyHttpClient.ActionFilters.ActionFilterAttribute class to enhance your function, for example logging, cache, validation
 
-...
+...cs
 
     [RoutePrefix("api/value")]
     public interface TestApiClient
