@@ -26,7 +26,7 @@ EasyHttpClient provide you an easy way to access HTTP resource(e.g. REST API cli
     
 ...
 
-#### Step 2, Config the HttpClientWrapperFactory
+#### Step 2, config the HttpClientWrapperFactory
 
 ...
 
