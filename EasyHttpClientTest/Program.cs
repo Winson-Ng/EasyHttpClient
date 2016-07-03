@@ -21,16 +21,16 @@ namespace EasyHttpClientTest
             factory.HttpClientSettings.MaxRetry = 3;
 
             var oauthApiClient = new HttpClientWrapperFactory().CreateFor<OAuthApiClient>(host);
-            var oauth2ClientHandler = new OAuth2ClientHandler(oauthApiClient);
-            factory.HttpClientSettings.OAuth2ClientHandler = oauth2ClientHandler;
+            //var oauth2ClientHandler = new OAuth2ClientHandler(oauthApiClient);
+            //factory.HttpClientSettings.OAuth2ClientHandler = oauth2ClientHandler;
 
-            oauth2ClientHandler.Login();
+            //oauth2ClientHandler.Login();
 
             var testApiClient = factory.CreateFor<TestApiClient>();
             string line;
             while ((line = Console.ReadLine()) != null)
             {
-                testApiClient.SetValue("myname", line);
+                //testApiClient.SetValue("myname", line);
                 var val = testApiClient.GetValue("myname");
 
                 Console.WriteLine("val=" + val);

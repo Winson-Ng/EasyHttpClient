@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace EasyHttpClient.Attributes
 {
     [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false)]
-    public class HeaderAttribute : Attribute, IParameterAttribute
+    public class HeaderAttribute : Attribute, IParameterScopeAttribute
     {
         public HeaderAttribute() { 
         
@@ -32,7 +32,7 @@ namespace EasyHttpClient.Attributes
             set;
         }
 
-        void IParameterAttribute.ProcessParameter(HttpRequestMessageBuilder requestBuilder, ParameterInfo parameterInfo, object parameterValue)
+        public void ProcessParameter(HttpRequestMessageBuilder requestBuilder, ParameterInfo parameterInfo, object parameterValue)
         {
             requestBuilder.Headers.AddRange(Utility.ExtractUrlParameter(this.Name ?? parameterInfo.Name, parameterValue, 1));
         }

@@ -1,4 +1,5 @@
 ﻿using EasyHttpClient;
+using EasyHttpClient.OAuth2;
 using EasyHttpClientTest.ApiClients;
 using System;
 using System.Collections.Generic;

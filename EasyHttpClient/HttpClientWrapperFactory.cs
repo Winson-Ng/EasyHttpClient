@@ -1,4 +1,4 @@
-﻿using EasyHttpClient.DelegatingHandlers;
+﻿using EasyHttpClient.OAuth2;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using System;
@@ -76,16 +76,8 @@ namespace EasyHttpClient
         #endregion
         public object CreateFor(Type type, Uri host)
         {
-            var handlers = new List<DelegatingHandler>();
-
-            if (this.HttpClientSettings.MaxRetry > 0)
-            {
-                handlers.Add(new RetryHttpHandler(this.HttpClientSettings.MaxRetry));
-            }
-
-            var client = HttpClientProvider.GetClient(this.HttpClientSettings, handlers.ToArray());
+            var client = HttpClientProvider.GetClient(this.HttpClientSettings);
             var proxyClass = new HttpClientWrapper(type, client, host, this.HttpClientSettings);
-
             return proxyClass.GetTransparentProxy();
         }
     }

@@ -12,94 +12,48 @@ namespace EasyHttpClient.Utilities
 {
     public static class HttpResponseMessageParser
     {
-        public static async Task<IHttpResult> ParseAsHttpResult(this HttpResponseMessage responseMessage, Type returnType, IEnumerable<MediaTypeFormatter> mediaTypeFormatters)
+        public static Task<IHttpResult> ParseAsHttpResult(this Task<HttpResponseMessage> responseMessageTask, Type returnObjectType, IEnumerable<MediaTypeFormatter> mediaTypeFormatters)
         {
-            HttpResult httpResult = null;
-            if (returnType.IsGenericType)
+            return responseMessageTask.Then(async responseMessage =>
             {
-                returnType = returnType.GenericTypeArguments[0];
-                httpResult = (HttpResult)Activator.CreateInstance(typeof(HttpResult<>).MakeGenericType(returnType));
-            }
-            else
-            {
-                httpResult = new HttpResult();
-            }
+                IHttpResult httpResult = (IHttpResult)Activator.CreateInstance(typeof(HttpResult<>).MakeGenericType(returnObjectType));
 
-            httpResult.Headers = responseMessage.Headers;
-            httpResult.IsSuccessStatusCode = responseMessage.IsSuccessStatusCode;
-            httpResult.ReasonPhrase = responseMessage.ReasonPhrase;
-            //httpResult.RequestMessage = responseMessage.RequestMessage;
-            httpResult.StatusCode = responseMessage.StatusCode;
-            httpResult.Version = responseMessage.Version;
+                httpResult.Headers = responseMessage.Headers;
+                httpResult.IsSuccessStatusCode = responseMessage.IsSuccessStatusCode;
+                httpResult.ReasonPhrase = responseMessage.ReasonPhrase;
+                httpResult.StatusCode = responseMessage.StatusCode;
+                httpResult.Version = responseMessage.Version;
 
-            if (responseMessage.IsSuccessStatusCode)
-            {
-                if (typeof(string) == returnType)
+                if (responseMessage.IsSuccessStatusCode)
                 {
-                    httpResult.Content = await responseMessage.Content.ReadAsStringAsync();
-                }
-                else if (typeof(Stream) == returnType)
-                {
-                    httpResult.Content = await responseMessage.Content.ReadAsStreamAsync();
-                }
-                else if (typeof(byte[]) == returnType)
-                {
-                    httpResult.Content = await responseMessage.Content.ReadAsByteArrayAsync();
+                    if (returnObjectType.IsBulitInType())
+                    {
+                        httpResult.Content = Convert.ChangeType(await responseMessage.Content.ReadAsStringAsync(), returnObjectType);
+                        responseMessage.Dispose();
+                    }
+                    else if (typeof(Stream).IsAssignableFrom(returnObjectType))
+                    {
+                        httpResult.Content = await responseMessage.Content.ReadAsStreamAsync();
+                    }
+                    else if (typeof(byte[]) == returnObjectType)
+                    {
+                        httpResult.Content = await responseMessage.Content.ReadAsByteArrayAsync();
+                        responseMessage.Dispose();
+                    }
+                    else
+                    {
+                        httpResult.Content = await responseMessage.Content.ReadAsAsync(returnObjectType, mediaTypeFormatters);
+                        responseMessage.Dispose();
+                    }
                 }
                 else
                 {
-                    httpResult.Content = await responseMessage.Content.ReadAsAsync(returnType, mediaTypeFormatters);
+                    httpResult.ErrorMessage = await responseMessage.Content.ReadAsStringAsync();
+                    responseMessage.Dispose();
                 }
-            }
-            else
-            {
-                httpResult.ErrorMessage = await responseMessage.Content.ReadAsStringAsync();
-            }
-            return httpResult;
-        }
-
-        public static Task ParseAsVoid(this HttpResponseMessage responseMessage)
-        {
-            responseMessage.EnsureSuccessStatusCode();
-            return Task.FromResult(0);
-        }
-
-        public static async Task<object> ParseAsObject(this HttpResponseMessage responseMessage, Type returnType, IEnumerable<MediaTypeFormatter> mediaTypeFormatters)
-        {
-            if (responseMessage.IsSuccessStatusCode)
-            {
-                var objectType = returnType;
-
-                if (objectType.IsBulitInType())
-                {
-                    var r = await responseMessage.Content.ReadAsStringAsync();
-                    return Convert.ChangeType(r, objectType);
-                }
-                else if (typeof(Stream).IsAssignableFrom(returnType))
-                {
-                    return await responseMessage.Content.ReadAsStreamAsync();
-                }
-                else if (typeof(IEnumerable<byte>).IsAssignableFrom(returnType))
-                {
-                    return await responseMessage.Content.ReadAsByteArrayAsync();
-                }
-                else
-                {
-                    return await responseMessage.Content.ReadAsAsync(objectType, mediaTypeFormatters);
-                }
-            }
-            else
-            {
-                switch (responseMessage.StatusCode)
-                {
-                    case HttpStatusCode.NotFound:
-                        break;
-                    default:
-                        responseMessage.EnsureSuccessStatusCode();
-                        break;
-                }
-                return null;
-            }
+                return httpResult;
+            });
+            
         }
     }
 }

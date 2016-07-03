@@ -16,7 +16,7 @@ namespace EasyHttpClient.Attributes
     }
 
     [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false)]
-    public class JsonBodyAttribute : Attribute, IParameterAttribute
+    public class JsonBodyAttribute : Attribute, IParameterScopeAttribute
     {
         public JsonBodyAttribute()
             : this(null)
@@ -52,7 +52,7 @@ namespace EasyHttpClient.Attributes
             MergeArrayHandling = MergeArrayHandling.Merge
         };
 
-        void IParameterAttribute.ProcessParameter(HttpRequestMessageBuilder requestBuilder, ParameterInfo parameterInfo, object parameterValue)
+        public void ProcessParameter(HttpRequestMessageBuilder requestBuilder, ParameterInfo parameterInfo, object parameterValue)
         {
             switch (this.JTokenType)
             {

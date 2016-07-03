@@ -6,7 +6,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace EasyHttpClient
+namespace EasyHttpClient.OAuth2
 {
     public interface IOAuth2ClientHandler
     {

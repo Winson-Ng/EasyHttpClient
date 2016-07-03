@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace EasyHttpClient.Attributes
 {
     [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false)]
-    public class RawContentAttribute : Attribute, IParameterAttribute
+    public class RawContentAttribute : Attribute, IParameterScopeAttribute
     {
         public RawContentAttribute() { 
         
@@ -38,7 +38,7 @@ namespace EasyHttpClient.Attributes
 
         private static readonly Encoding Utf8Encoding = new UTF8Encoding(false);
 
-        void IParameterAttribute.ProcessParameter(HttpRequestMessageBuilder requestBuilder, ParameterInfo parameterInfo, object parameterValue)
+        public void ProcessParameter(HttpRequestMessageBuilder requestBuilder, ParameterInfo parameterInfo, object parameterValue)
         {
             if (parameterValue is Stream) {
                 requestBuilder.StreamBody = Tuple.Create(this.ContentType, parameterValue as Stream);

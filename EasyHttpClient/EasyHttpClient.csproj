@@ -54,6 +54,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ActionFilters\ActionContext.cs" />
+    <Compile Include="ActionFilters\ActionFilterAttribute.cs" />
+    <Compile Include="ActionFilters\IActionFilter.cs" />
+    <Compile Include="App_Packages\TaskHelpers.Sources.0.3\TaskHelpers.cs" />
+    <Compile Include="App_Packages\TaskHelpers.Sources.0.3\TaskHelpersExtensions.cs" />
     <Compile Include="Attributes\AllowAnonymousAttribute.cs" />
     <Compile Include="Attributes\AuthorizeAttribute.cs">
       <SubType>Code</SubType>
@@ -71,7 +76,6 @@
     <Compile Include="Attributes\Parameter\CookieAttribute.cs" />
     <Compile Include="Attributes\Route\RoutePrefixAttribute.cs" />
     <Compile Include="Attributes\Route\RouteAttribute.cs" />
-    <Compile Include="DelegatingHandlers\RetryHttpHandler.cs" />
     <Compile Include="HttpClientWrapper.cs" />
     <Compile Include="HttpClientWrapperFactory.cs" />
     <Compile Include="IHttpClientProvider.cs" />
@@ -81,11 +85,12 @@
     <Compile Include="Attributes\Parameter\PathParamAttribute.cs" />
     <Compile Include="Attributes\Parameter\QueryStringAttribute.cs" />
     <Compile Include="Attributes\Parameter\IParameterAttribute.cs" />
-    <Compile Include="IOAuth2ClientHandler.cs" />
+    <Compile Include="OAuth2\IOAuth2ClientHandler.cs" />
+    <Compile Include="MethodDescription.cs" />
     <Compile Include="Utilities\HttpRequestMessageBuilder.cs" />
     <Compile Include="Utilities\HttpResponseMessageParser.cs" />
     <Compile Include="IHttpResult.cs" />
-    <Compile Include="ParameterWithAttributes.cs" />
+    <Compile Include="ParameterDescription.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Utilities\OAuth2ClientHelper.cs" />
     <Compile Include="Utilities\TaskExtensions.cs" />

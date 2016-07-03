@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace EasyHttpClient.Attributes
 {
     [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false)]
-    public class CookieAttribute : Attribute, IParameterAttribute
+    public class CookieAttribute : Attribute, IParameterScopeAttribute
     {
         public CookieAttribute() { 
         
@@ -34,7 +34,7 @@ namespace EasyHttpClient.Attributes
             set;
         }
 
-        void IParameterAttribute.ProcessParameter(HttpRequestMessageBuilder requestBuilder, ParameterInfo parameterInfo, object parameterValue)
+        public void ProcessParameter(HttpRequestMessageBuilder requestBuilder, ParameterInfo parameterInfo, object parameterValue)
         {
             var pathParams = Utility.ExtractUrlParameter(this.Name ?? parameterInfo.Name, parameterValue, 1);
             foreach (var p in pathParams)

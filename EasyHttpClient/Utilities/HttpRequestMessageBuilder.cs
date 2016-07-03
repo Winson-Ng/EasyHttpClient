@@ -35,7 +35,7 @@ namespace EasyHttpClient.Utilities
         }
     }
 
-    internal class HttpRequestMessageBuilder
+    public class HttpRequestMessageBuilder
     {
         private static readonly Encoding Utf8Encoding = new UTF8Encoding(false);
 
@@ -89,13 +89,18 @@ namespace EasyHttpClient.Utilities
                 httpMessage.Headers.GetCookies().Add(c);
 
 
-            var path = HttpUtility.UrlDecode(UriBuilder.Path);
-            foreach (var p in this.PathParams)
+            if (this.PathParams.Any())
             {
-                path = path.Replace("{" + p.Key + "}", p.Value);
+                var path = HttpUtility.UrlDecode(UriBuilder.Path);
+                foreach (var p in this.PathParams)
+                {
+                    path = path.Replace("{" + p.Key + "}", p.Value);
+                }
+                UriBuilder.Path = HttpUtility.UrlPathEncode(path);
             }
-            UriBuilder.Path = HttpUtility.UrlPathEncode(path);
-            UriBuilder.Query = string.Join("&", this.QueryStrings.Select(q => q.Key + "=" + HttpUtility.UrlEncode(q.Value)));
+
+            if (this.QueryStrings.Any())
+                UriBuilder.Query = string.Join("&", this.QueryStrings.Select(q => q.Key + "=" + HttpUtility.UrlEncode(q.Value)));
 
             if (this.HttpMethod == HttpMethod.Post
                 || this.HttpMethod == HttpMethod.Put)

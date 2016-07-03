@@ -13,7 +13,7 @@ namespace EasyHttpClientTest.ApiClients
         [Route("{key}")]
         [Authorize]
         [HttpGet]
-        object GetValue(string key);
+        object GetValue(string key, string def="test");
 
         [Route("{key}")]
         [Authorize]

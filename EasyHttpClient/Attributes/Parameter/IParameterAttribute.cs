@@ -22,13 +22,13 @@ namespace EasyHttpClient.Attributes
         RawContent = 7
     }
 
-    internal class ParameterAttributeFactory
+    internal class ParameterScopeAttributeFactory
     {
         //public string Name { get; set; }
         //public ParameterScope Scope { get; set; }
         //public object DefaultValue { get; set; }
 
-        public static IParameterAttribute CreateByHttpMethod(HttpMethod httpMethod, ParameterInfo parameterInfo)
+        public static IParameterScopeAttribute CreateByHttpMethod(HttpMethod httpMethod, ParameterInfo parameterInfo)
         {
             if (typeof(Stream).IsAssignableFrom(parameterInfo.ParameterType) || typeof(IEnumerable<byte>).IsAssignableFrom(parameterInfo.ParameterType))
             {
@@ -50,7 +50,7 @@ namespace EasyHttpClient.Attributes
 
     }
 
-    internal interface IParameterAttribute
+    public interface IParameterScopeAttribute
     {
         string Name { get; }
         ParameterScope Scope { get; }

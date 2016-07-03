@@ -1,47 +1,53 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Remoting.Messaging;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web;
 
 namespace EasyHttpClient.Utilities
 {
     internal static class TaskExtensions
     {
-        public async static Task<TResult> CastTask<TResult>(this Task<object> task)
+        public async static Task<TResult> CastHttpResultTask<TResult>(this Task<IHttpResult> task)
         {
             var result = await task;
             return (TResult)result;
         }
 
-        public static Task<T> Retry<T>(this Func<Task<T>> taskCreate, Func<Task<T>, Task<bool>> policy, int retryLimit)
+        public async static Task<TResult> CastObjectTask<TResult>(this Task<IHttpResult> task)
         {
-            return taskCreate().ContinueWith(async t =>
+            var result = await task;
+            return (TResult)result.Content;
+        }
+
+        public static Task<T> Retry<T>(this Func<Task<T>> taskCreate, Func<T, Task<bool>> policy, int retryLimit)
+        {
+            return taskCreate().Then(async r=>
             {
-                var task = t;
-                if (retryLimit > 0 && await policy(task))
+                if (retryLimit > 0 && await policy(r))
                 {
-                    return await Retry(taskCreate, policy, retryLimit--);
+                    return await Retry(taskCreate, policy, retryLimit-1);
                 }
                 else
                 {
-                    return await task;
+                    return r;
                 }
-            }).Unwrap();
+            });
         }
-        public static Task Retry(this Func<Task> taskCreate, Func<Task, bool> policy, int retryLimit)
+        public static Task Retry(this Func<Task> taskCreate, int retryLimit)
         {
-            return taskCreate().ContinueWith(t =>
+            return taskCreate().Then(() =>
             {
-                var task = t;
-                if (retryLimit > 0 && policy(task))
+                if (retryLimit > 0 )
                 {
-                    return Retry(taskCreate, policy, retryLimit--);
+                    return Retry(taskCreate, retryLimit-1);
                 }
                 else {
-                    return task;
+                    return Task.FromResult(0);
                 }
-            }).Unwrap();
+            });
         }
     }
 }
