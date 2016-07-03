@@ -5,7 +5,7 @@
 EasyHttpClient provide you an easy way to access HTTP resource(e.g. REST API client, html, stream, upload and down).
 
 ## Usage
-### 3 steps to go?
+### 3 steps to go
 
 #### Step 1, create your http client interface
 
