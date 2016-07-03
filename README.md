@@ -7,7 +7,7 @@ EasyHttpClient provide you an easy way to access HTTP resource(e.g. REST API cli
 ## Usage
 ### 3 steps to go
 
-#### Step 1, create your http client interface
+#### Step 1, create your http client interface:
 
 ...cs
 
@@ -26,7 +26,7 @@ EasyHttpClient provide you an easy way to access HTTP resource(e.g. REST API cli
     
 ...
 
-#### Step 2, config the HttpClientWrapperFactory
+#### Step 2, config the HttpClientWrapperFactory:
 
 ...cs
 
@@ -37,7 +37,7 @@ EasyHttpClient provide you an easy way to access HTTP resource(e.g. REST API cli
     
 ...
 
-#### Step 3, use in my code
+#### Step 3, use in my code:
 
 ...cs
 
@@ -46,7 +46,7 @@ EasyHttpClient provide you an easy way to access HTTP resource(e.g. REST API cli
   
 ...
 
-### Config OAuth2
+### Config OAuth2:
 ...cs
 
     factory.HttpClientSettings.OAuth2ClientHandler = new MyOAuth2ClientHandler();
@@ -54,7 +54,7 @@ EasyHttpClient provide you an easy way to access HTTP resource(e.g. REST API cli
 ...
 
 
-### Extend HttpClientProvider, to add my handlers on System.Net.Http.HttpClient class
+### Extend HttpClientProvider, to add my handlers on System.Net.Http.HttpClient class:
 
 ...cs
 
@@ -62,7 +62,7 @@ EasyHttpClient provide you an easy way to access HTTP resource(e.g. REST API cli
     
 ...
 
-### Extend EasyHttpClient.ActionFilters.ActionFilterAttribute class to enhance your function, for example logging, cache, validation
+### Extend EasyHttpClient.ActionFilters.ActionFilterAttribute class to enhance your function, for example logging, cache, validation:
 
 ...cs
 
