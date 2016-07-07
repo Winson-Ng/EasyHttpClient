@@ -12,17 +12,20 @@ namespace EasyHttpClient.Utilities
 {
     public static class HttpResponseMessageParser
     {
-        public static Task<IHttpResult> ParseAsHttpResult(this Task<HttpResponseMessage> responseMessageTask, Type returnObjectType, IEnumerable<MediaTypeFormatter> mediaTypeFormatters)
+        public static Task<IHttpResult> ParseAsHttpResult(this Task<HttpResponseMessage> responseMessageTask, Type returnObjectType, HttpClientSettings httpClientSettings)
         {
             return responseMessageTask.Then(async responseMessage =>
             {
-                IHttpResult httpResult = (IHttpResult)Activator.CreateInstance(typeof(HttpResult<>).MakeGenericType(returnObjectType));
+                IHttpResult httpResult = (IHttpResult)Activator.CreateInstance(typeof(HttpResult<>).MakeGenericType(returnObjectType), httpClientSettings.JsonSerializerSettings);
 
                 httpResult.Headers = responseMessage.Headers;
                 httpResult.IsSuccessStatusCode = responseMessage.IsSuccessStatusCode;
                 httpResult.ReasonPhrase = responseMessage.ReasonPhrase;
                 httpResult.StatusCode = responseMessage.StatusCode;
                 httpResult.Version = responseMessage.Version;
+
+                if (responseMessage.Content != null)
+                    httpResult.ContentHeaders = responseMessage.Content.Headers;
 
                 if (responseMessage.IsSuccessStatusCode)
                 {
@@ -42,7 +45,7 @@ namespace EasyHttpClient.Utilities
                     }
                     else
                     {
-                        httpResult.Content = await responseMessage.Content.ReadAsAsync(returnObjectType, mediaTypeFormatters);
+                        httpResult.Content = await responseMessage.Content.ReadAsAsync(returnObjectType, new[] { httpClientSettings.JsonMediaTypeFormatter });
                         responseMessage.Dispose();
                     }
                 }
@@ -53,7 +56,7 @@ namespace EasyHttpClient.Utilities
                 }
                 return httpResult;
             });
-            
+
         }
     }
 }

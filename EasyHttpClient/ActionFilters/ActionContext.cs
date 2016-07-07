@@ -18,8 +18,14 @@ namespace EasyHttpClient.ActionFilters
             this.MethodCallMessage = methodCallMessage;
             this.Properties = new Dictionary<string, object>();
         }
+
         public IMethodCallMessage MethodCallMessage { get; private set; }
 
+        public HttpClientSettings HttpClientSettings
+        {
+            get;
+            internal set;
+        }
         public MethodDescription MethodDescription
         {
             get;
@@ -51,7 +57,7 @@ namespace EasyHttpClient.ActionFilters
         public IHttpResult CreateHttpResult()
         {
 
-          return (IHttpResult)Activator.CreateInstance(typeof(HttpResult<>).MakeGenericType(this.MethodDescription.HttpResultObjectType));
+            return (IHttpResult)Activator.CreateInstance(typeof(HttpResult<>).MakeGenericType(this.MethodDescription.HttpResultObjectType), this.HttpClientSettings.JsonSerializerSettings);
 
         }
     }

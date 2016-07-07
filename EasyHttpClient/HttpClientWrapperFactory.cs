@@ -11,26 +11,6 @@ using System.Threading.Tasks;
 
 namespace EasyHttpClient
 {
-    public class HttpClientSettings
-    {
-        private static readonly JsonSerializerSettings DefaultJsonSerializerSettings = new JsonSerializerSettings()
-            {
-                NullValueHandling = NullValueHandling.Ignore,
-                ContractResolver = new CamelCasePropertyNamesContractResolver()
-            };
-        public IOAuth2ClientHandler OAuth2ClientHandler { get; set; }
-        public int MaxRetry { get; set; }
-        public JsonSerializerSettings JsonSerializerSettings
-        {
-            get;
-            set;
-        }
-
-        internal HttpClientSettings()
-        {
-            this.JsonSerializerSettings = DefaultJsonSerializerSettings;
-        }
-    }
     public class HttpClientWrapperFactory
     {
         public Uri DefaultHost { get; set; }

@@ -11,23 +11,8 @@ using System.Threading.Tasks;
 
 namespace EasyHttpClient.Attributes
 {
-    public enum ParameterScope
-    {
-        Query = 0,
-        Path = 2,
-        Header = 3,
-        Cookie = 4,
-        Form = 5,
-        Json = 6,
-        RawContent = 7
-    }
-
     internal class ParameterScopeAttributeFactory
     {
-        //public string Name { get; set; }
-        //public ParameterScope Scope { get; set; }
-        //public object DefaultValue { get; set; }
-
         public static IParameterScopeAttribute CreateByHttpMethod(HttpMethod httpMethod, ParameterInfo parameterInfo)
         {
             if (typeof(Stream).IsAssignableFrom(parameterInfo.ParameterType) || typeof(IEnumerable<byte>).IsAssignableFrom(parameterInfo.ParameterType))
@@ -50,12 +35,4 @@ namespace EasyHttpClient.Attributes
 
     }
 
-    public interface IParameterScopeAttribute
-    {
-        string Name { get; }
-        ParameterScope Scope { get; }
-
-        void ProcessParameter(HttpRequestMessageBuilder requestBuilder, ParameterInfo parameterInfo, object parameterValue);
-
-    }
 }

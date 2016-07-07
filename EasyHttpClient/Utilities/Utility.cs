@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Web;
 using System.Reflection;
+using System.Collections;
 
 namespace EasyHttpClient.Utilities
 {
@@ -14,7 +15,7 @@ namespace EasyHttpClient.Utilities
     {
         public static IEnumerable<KeyValuePair<string, string>> ExtractUrlParameter(string name, object value, int deep)
         {
-            if (deep < 0)
+            if (deep < 0 || value == null)
                 return Enumerable.Empty<KeyValuePair<string, string>>();
 
 
@@ -37,7 +38,10 @@ namespace EasyHttpClient.Utilities
             }
             else if (paramType.IsEnumerableType())
             {
-                kps.Add(new KeyValuePair<string, string>(name, autoEncodeParameter((string.Join(",", value)))));
+                var vals = ((IEnumerable)value).Cast<object>();
+                foreach (var val in vals)
+                    kps.Add(new KeyValuePair<string, string>(name, autoEncodeParameter(val)));
+                //kps.Add(new KeyValuePair<string, string>(name, autoEncodeParameter((string.Join(",", value)))));
             }
             else
             {
@@ -63,16 +67,16 @@ namespace EasyHttpClient.Utilities
             return kps;
         }
 
-        public static Uri BuildPath(Uri baseUri, params string[] paths)
+        public static Uri CombinePaths(Uri baseUri, params string[] paths)
         {
-            return BuildPath(baseUri, paths as IEnumerable<string>);
+            return CombinePaths(baseUri, paths as IEnumerable<string>);
         }
 
-        public static Uri BuildPath(Uri baseUri, IEnumerable<string> paths)
+        public static Uri CombinePaths(Uri baseUri, IEnumerable<string> paths)
         {
             if (paths != null && paths.Any())
             {
-                return BuildPath(new Uri(baseUri, paths.FirstOrDefault()), paths.Skip(1));
+                return CombinePaths(new Uri(baseUri, paths.FirstOrDefault()), paths.Skip(1));
             }
             else
             {

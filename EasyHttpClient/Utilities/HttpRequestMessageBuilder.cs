@@ -12,29 +12,6 @@ using System.Web;
 
 namespace EasyHttpClient.Utilities
 {
-    internal static class HttpRequestMessageExtension
-    {
-        public static HttpRequestMessage Clone(this HttpRequestMessage req)
-        {
-            var clone = new HttpRequestMessage(req.Method, req.RequestUri);
-
-            clone.Content = req.Content;
-            clone.Version = req.Version;
-
-            foreach (var prop in req.Properties)
-            {
-                clone.Properties.Add(prop);
-            }
-
-            foreach (var header in req.Headers)
-            {
-                clone.Headers.TryAddWithoutValidation(header.Key, header.Value);
-            }
-
-            return clone;
-        }
-    }
-
     public class HttpRequestMessageBuilder
     {
         private static readonly Encoding Utf8Encoding = new UTF8Encoding(false);
@@ -56,11 +33,11 @@ namespace EasyHttpClient.Utilities
             }
         }
 
-        public List<KeyValuePair<string, string>> Headers { get; set; }
-        public List<CookieHeaderValue> Cookies { get; set; }
-        public List<KeyValuePair<string, string>> PathParams { get; set; }
-        public List<KeyValuePair<string, string>> QueryStrings { get; set; }
-        public List<KeyValuePair<string, string>> FormBodys { get; set; }
+        public List<KeyValuePair<string, string>> Headers { get; private set; }
+        public List<CookieHeaderValue> Cookies { get; private set; }
+        public List<KeyValuePair<string, string>> PathParams { get; private set; }
+        public List<KeyValuePair<string, string>> QueryStrings { get; private set; }
+        public List<KeyValuePair<string, string>> FormBodys { get; private set; }
         public JToken JsonBody { get; set; }
         public Tuple<string, Stream> StreamBody { get; set; }
 
@@ -82,19 +59,19 @@ namespace EasyHttpClient.Utilities
         {
             var httpMessage = new HttpRequestMessage(HttpMethod, UriBuilder.Uri);
 
-            foreach (var h in this.Headers)
-                httpMessage.Headers.TryAddWithoutValidation(h.Key, h.Value);
+
+            foreach (var h in this.Headers.GroupBy(h => h.Key))
+                httpMessage.Headers.TryAddWithoutValidation(h.Key, h.Select(i => i.Value));
 
             foreach (var c in this.Cookies)
                 httpMessage.Headers.GetCookies().Add(c);
 
-
             if (this.PathParams.Any())
             {
                 var path = HttpUtility.UrlDecode(UriBuilder.Path);
-                foreach (var p in this.PathParams)
+                foreach (var p in this.PathParams.GroupBy(p => p.Key))
                 {
-                    path = path.Replace("{" + p.Key + "}", p.Value);
+                    path = path.Replace("{" + p.Key + "}", string.Join(",", p.Select(i => i.Value)));
                 }
                 UriBuilder.Path = HttpUtility.UrlPathEncode(path);
             }

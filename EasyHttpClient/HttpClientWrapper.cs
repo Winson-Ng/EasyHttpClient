@@ -53,7 +53,7 @@ namespace EasyHttpClient
         private static readonly Encoding Utf8Encoding = new UTF8Encoding(false);
         private static readonly Regex RouteParameterParaser = new Regex(@"\{(?<paraName>[a-zA-Z_][a-zA-Z0-9_]*)\}", RegexOptions.Compiled | RegexOptions.CultureInvariant);
         private RoutePrefixAttribute _routePrefixAttribute;
-        private JsonMediaTypeFormatter _jsonMediaTypeFormatter;
+        //private JsonMediaTypeFormatter _jsonMediaTypeFormatter;
         private HttpClient _httpClient;
         private HttpClientSettings _httpClientSettings;
         private Uri _host;
@@ -74,10 +74,10 @@ namespace EasyHttpClient
             //_httpClientProvider = httpClientProvider;
             _host = host;
             _httpClientSettings = httpClientSettings;
-            _jsonMediaTypeFormatter = new JsonMediaTypeFormatter()
-            {
-                SerializerSettings = _httpClientSettings.JsonSerializerSettings
-            };
+            //_jsonMediaTypeFormatter = new JsonMediaTypeFormatter()
+            //{
+            //    SerializerSettings = _httpClientSettings.JsonSerializerSettings
+            //};
             _routePrefixAttribute = objectType.GetCustomAttribute<RoutePrefixAttribute>();
             _authorizeRequired = objectType.IsDefined(typeof(AuthorizeAttribute));
         }
@@ -102,7 +102,7 @@ namespace EasyHttpClient
 
                 actionContext.MethodDescription = this.GetMethodDescription(methodInfo);
 
-                var uriBuilder = new UriBuilder(Utility.BuildPath(this._host
+                var uriBuilder = new UriBuilder(Utility.CombinePaths(this._host
                     , _routePrefixAttribute != null ? (_routePrefixAttribute.Prefix + "/") : ""
                     , actionContext.MethodDescription.Route));
 
@@ -253,8 +253,8 @@ namespace EasyHttpClient
                         {
                             HttpMethod = httpMethod,
                             AuthorizeRequired = (_authorizeRequired ||
-                            methodInfo.IsDefined(typeof(AuthorizeAttribute)))
-                            && !methodInfo.IsDefined(typeof(AllowAnonymousAttribute)),
+                                                methodInfo.IsDefined(typeof(AuthorizeAttribute)))
+                                                && !methodInfo.IsDefined(typeof(AllowAnonymousAttribute)),
                             Route = routeAttribute.Path,
                             ActionFilters = methodInfo.GetCustomAttributes().Where(a => a is IActionFilter).Cast<IActionFilter>().OrderBy(i => i.Order).ToArray(),
                             Parameters = attributedParameter.Union(nonAttributedParameter).ToArray()
@@ -379,7 +379,7 @@ namespace EasyHttpClient
 
                         methodDescription.HttpResultConverter = (httpTask) =>
                         {
-                            return httpTask.ParseAsHttpResult(methodDescription.HttpResultObjectType, new[] { _jsonMediaTypeFormatter });
+                            return httpTask.ParseAsHttpResult(methodDescription.HttpResultObjectType, _httpClientSettings);
                         };
 
                         MethodDescriptions.Add(methodInfo, methodDescription);

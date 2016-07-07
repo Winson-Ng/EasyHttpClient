@@ -18,18 +18,74 @@ namespace EasyHttpClient
 
     public interface IHttpResult
     {
+        TofError ErrorMessageAs<TofError>();
+
+        // Summary:
+        //     Gets or sets the content of a HTTP response message.
+        //
+        // Returns:
+        //     Returns System.Net.Http.HttpContent.The content of the HTTP response message.
         object Content { get; set; }
         string ErrorMessage { get; set; }
+        /// <summary>
+        /// They are:
+        /// AcceptRanges, Age, ETag, Location, ProxyAuthenticate, RetryAfter, Server, Vary, WwwAuthenticate, CacheControl, Connection, ConnectionClose, Date, Pragma, Trailer, TransferEncoding, TransferEncodingChunked, Upgrade, Via, Warning
+        /// </summary>
         HttpResponseHeaders Headers { get; set; }
+        /// <summary>
+        /// They are: 
+        /// Allow, Content-Disposition, Content-Encoding, Content-Language, Content-Length, Content-Location, Content-MD5, Content-Range, Content-Type, Expires, LastModified
+        /// </summary>
+        HttpContentHeaders ContentHeaders { get; set; }
+        //
+        // Summary:
+        //     Gets a value that indicates if the HTTP response was successful.
+        //
+        // Returns:
+        //     Returns System.Boolean.A value that indicates if the HTTP response was successful.
+        //     true if System.Net.Http.HttpResponseMessage.StatusCode was in the range 200-299;
+        //     otherwise false.
         bool IsSuccessStatusCode { get; set; }
+        //
+        // Summary:
+        //     Gets or sets the reason phrase which typically is sent by servers together
+        //     with the status code.
+        //
+        // Returns:
+        //     Returns System.String.The reason phrase sent by the server.
         string ReasonPhrase { get; set; }
+        //
+        // Summary:
+        //     Gets or sets the status code of the HTTP response.
+        //
+        // Returns:
+        //     Returns System.Net.HttpStatusCode.The status code of the HTTP response.
         HttpStatusCode StatusCode { get; set; }
+        //
+        // Summary:
+        //     Gets or sets the HTTP message version.
+        //
+        // Returns:
+        //     Returns System.Version.The HTTP message version. The default is 1.1.
         Version Version { get; set; }
     }
 
     internal class HttpResult<T> : IHttpResult<T>, IConvertible
     {
+        private JsonSerializerSettings _jsonSetting;
+
+        public HttpResult(JsonSerializerSettings jsonSetting)
+        {
+            this._jsonSetting = jsonSetting;
+        }
+
         public HttpResponseHeaders Headers
+        {
+            get;
+            set;
+        }
+
+        public HttpContentHeaders ContentHeaders
         {
             get;
             set;
@@ -180,5 +236,14 @@ namespace EasyHttpClient
             throw new NotImplementedException();
         }
         #endregion
+
+        public TofError ErrorMessageAs<TofError>()
+        {
+            return this.ErrorMessageAs<TofError>(this._jsonSetting);
+        }
+        public TofError ErrorMessageAs<TofError>(JsonSerializerSettings _jsonSerializerSettings)
+        {
+            return JsonConvert.DeserializeObject<TofError>(this.ErrorMessage, _jsonSerializerSettings);
+        }
     }
 }

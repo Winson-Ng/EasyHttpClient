@@ -11,9 +11,9 @@ namespace EasyHttpClient.ActionFilters
     {
         public int Order { get; set; }
 
-        public virtual Task<IHttpResult> ActionInvoke(ActionContext context, Func<Task<IHttpResult>> Continuation)
+        public virtual Task<IHttpResult> ActionInvoke(ActionContext context, Func<Task<IHttpResult>> continuation)
         {
-            return Continuation();
+            return continuation();
         }
     }
 }
