@@ -107,6 +107,7 @@ namespace EasyHttpClient
                     , actionContext.MethodDescription.Route));
 
                 actionContext.HttpRequestMessageBuilder = new HttpRequestMessageBuilder(actionContext.MethodDescription.HttpMethod, uriBuilder, _httpClientSettings.JsonSerializerSettings);
+                actionContext.HttpRequestMessageBuilder.MultiPartAttribute = actionContext.MethodDescription.MultiPartAttribute;
 
                 actionContext.ParameterValues = new Dictionary<string, object>();
 
@@ -381,6 +382,8 @@ namespace EasyHttpClient
                         {
                             return httpTask.ParseAsHttpResult(methodDescription.HttpResultObjectType, _httpClientSettings);
                         };
+
+                        methodDescription.MultiPartAttribute = methodInfo.GetCustomAttribute<MultiPartAttribute>();
 
                         MethodDescriptions.Add(methodInfo, methodDescription);
                     }

@@ -1,4 +1,5 @@
 ﻿using EasyHttpClient.ActionFilters;
+using EasyHttpClient.Attributes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -32,10 +33,12 @@ namespace EasyHttpClient
 
         public Type ReturnType { get { return this.MethodInfo.ReturnType; } }
 
+        internal MultiPartAttribute MultiPartAttribute { get; set; }
         internal Type HttpResultObjectType { get; set; }
 
         internal IActionFilter[] ActionFilters { get; set; }
         internal Func<Task<HttpResponseMessage>, Task<IHttpResult>> HttpResultConverter { get; set; }
         internal Func<IMethodCallMessage, Func<Task<IHttpResult>>, ReturnMessage> MethodResultConveter { get; set; }
+
     }
 }

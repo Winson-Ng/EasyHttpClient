@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,8 +14,9 @@ namespace EasyHttpClient.Attributes
     [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false)]
     public class RawContentAttribute : Attribute, IParameterScopeAttribute
     {
-        public RawContentAttribute() { 
-        
+        public RawContentAttribute()
+        {
+
         }
         public RawContentAttribute(string name)
         {
@@ -40,16 +43,27 @@ namespace EasyHttpClient.Attributes
 
         public void ProcessParameter(HttpRequestMessageBuilder requestBuilder, ParameterInfo parameterInfo, object parameterValue)
         {
-            if (parameterValue is Stream) {
-                requestBuilder.StreamBody = Tuple.Create(this.ContentType, parameterValue as Stream);
+            if (parameterValue is Stream)
+            {
+                var s = parameterValue as Stream;
+                var content = new StreamContent(s);
+                content.Headers.ContentType = new MediaTypeHeaderValue(this.ContentType);
+                requestBuilder.RawContents.Add(content);
             }
             else if (parameterValue is IEnumerable<byte>)
             {
-                requestBuilder.StreamBody = Tuple.Create(this.ContentType, new MemoryStream((parameterValue as IEnumerable<byte>).ToArray()) as Stream);
+                var s = new MemoryStream((parameterValue as IEnumerable<byte>).ToArray());
+                var content = new StreamContent(s);
+                content.Headers.ContentType = new MediaTypeHeaderValue(this.ContentType);
+                requestBuilder.RawContents.Add(content);
             }
-            else {
+            else
+            {
                 var val = Convert.ToString(parameterInfo);
-                requestBuilder.StreamBody = Tuple.Create(this.ContentType, new MemoryStream(Utf8Encoding.GetBytes(val)) as Stream);
+                var s = new MemoryStream(Utf8Encoding.GetBytes(val));
+                var content = new StreamContent(s);
+                content.Headers.ContentType = new MediaTypeHeaderValue(this.ContentType);
+                requestBuilder.RawContents.Add(content);
             }
         }
     }

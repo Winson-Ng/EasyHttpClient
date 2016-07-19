@@ -15,7 +15,15 @@ namespace EasyHttpClient.Attributes
     {
         public static IParameterScopeAttribute CreateByHttpMethod(HttpMethod httpMethod, ParameterInfo parameterInfo)
         {
-            if (typeof(Stream).IsAssignableFrom(parameterInfo.ParameterType) || typeof(IEnumerable<byte>).IsAssignableFrom(parameterInfo.ParameterType))
+            if (typeof(FileStream).IsAssignableFrom(parameterInfo.ParameterType) || typeof(IEnumerable<byte>).IsAssignableFrom(parameterInfo.ParameterType))
+            {
+                return new FileContentAttribute() { Name = parameterInfo.Name};
+            }
+            else if (typeof(FileInfo).IsAssignableFrom(parameterInfo.ParameterType) || typeof(IEnumerable<byte>).IsAssignableFrom(parameterInfo.ParameterType))
+            {
+                return new FileContentAttribute() { Name = parameterInfo.Name };
+            }
+            else if (typeof(Stream).IsAssignableFrom(parameterInfo.ParameterType) || typeof(IEnumerable<byte>).IsAssignableFrom(parameterInfo.ParameterType))
             {
                 return new RawContentAttribute() { Name = parameterInfo.Name, ContentType = "application/o-stream" };
             }

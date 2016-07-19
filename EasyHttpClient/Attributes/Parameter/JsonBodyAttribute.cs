@@ -71,7 +71,7 @@ namespace EasyHttpClient.Attributes
             var objectType = parameterValue != null ? parameterValue.GetType() : parameterInfo.ParameterType;
             var val = parameterValue;
 
-            if (objectType.IsBulitInType())
+            if (objectType.IsBulitInType() || objectType.IsEnumerableType())
             {
                 val = new Dictionary<string, object>{
                 {this.Name ?? parameterInfo.Name, parameterValue}

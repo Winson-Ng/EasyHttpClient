@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using EasyHttpClient.Attributes;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -16,6 +17,7 @@ namespace EasyHttpClient.Utilities
     {
         private static readonly Encoding Utf8Encoding = new UTF8Encoding(false);
 
+        public MultiPartAttribute MultiPartAttribute { get; set; }
         public HttpMethod HttpMethod { get; set; }
         public UriBuilder UriBuilder { get; set; }
         public JsonSerializer JsonSerializer { get; private set; }
@@ -39,7 +41,16 @@ namespace EasyHttpClient.Utilities
         public List<KeyValuePair<string, string>> QueryStrings { get; private set; }
         public List<KeyValuePair<string, string>> FormBodys { get; private set; }
         public JToken JsonBody { get; set; }
-        public Tuple<string, Stream> StreamBody { get; set; }
+
+        /// <summary>
+        /// Tuple (ContentType, Stream)
+        /// </summary>
+        //public List<Tuple<string, Stream>> StreamBodys { get; set; }
+
+
+        public List<HttpContent> RawContents { get; set; }
+
+        //public List<KeyValuePair<string, FileInfo>> Files { get; set; }
 
         public HttpRequestMessageBuilder(HttpMethod httpMethod, UriBuilder uriBuilder, JsonSerializerSettings jsonSetting)
         {
@@ -52,7 +63,9 @@ namespace EasyHttpClient.Utilities
             this.PathParams = new List<KeyValuePair<string, string>>();
             this.QueryStrings = new List<KeyValuePair<string, string>>();
             this.FormBodys = new List<KeyValuePair<string, string>>();
-
+            //this.StreamBodys = new List<Tuple<string, Stream>>();
+            //this.Files = new List<KeyValuePair<string, FileInfo>>();
+            this.RawContents = new List<HttpContent>();
         }
 
         public HttpRequestMessage Build()
@@ -82,28 +95,92 @@ namespace EasyHttpClient.Utilities
             if (this.HttpMethod == HttpMethod.Post
                 || this.HttpMethod == HttpMethod.Put)
             {
-                if (new[]{
-                FormBodys.Any(),
-                JsonBody!=null,
-                StreamBody!=null
-            }.Count(i => i == true) > 1)
+                if (this.MultiPartAttribute != null)
                 {
-                    throw new NotSupportedException("Not support multiple kinds of http content in a message!");
+                    var multipleContent = new MultipartContent(this.MultiPartAttribute.MultiPartType, Guid.NewGuid().ToString());
+
+                    if (FormBodys.Any())
+                    {
+                        var content = new FormUrlEncodedContent(this.FormBodys);
+                        multipleContent.Add(content);
+                    }
+                    if (JsonBody != null)
+                    {
+                        var content = new StringContent(JsonBody.ToString(), Utf8Encoding, "application/json");
+                        multipleContent.Add(content);
+                    }
+
+                    if (RawContents.Any())
+                    {
+                        foreach (var c in RawContents)
+                            multipleContent.Add(c);
+                    }
+
+                    //if (Files != null)
+                    //{
+                    //    foreach (var f in Files)
+                    //    {
+                    //        var content = new StreamContent(f.Value.OpenRead());
+                    //        content.Headers.ContentDisposition = new ContentDispositionHeaderValue(this.MultiPartAttribute.MultiPartType);
+                    //        content.Headers.ContentDisposition.FileName = f.Value.Name;
+                    //        content.Headers.ContentDisposition.Name = f.Key;
+                    //        content.Headers.ContentType = new MediaTypeHeaderValue(MimeMapping.GetMimeMapping(f.Value.Name));
+                    //        multipleContent.Add(content);
+                    //    }
+                    //}
+                    //if (StreamBodys != null)
+                    //{
+                    //    foreach (var s in StreamBodys)
+                    //    {
+                    //        var content = new StreamContent(s.Item2);
+                    //        content.Headers.ContentType = new MediaTypeHeaderValue(s.Item1);
+                    //        multipleContent.Add(content);
+                    //    }
+                    //}
+
+                    httpMessage.Content = multipleContent;
+                }
+                else
+                {
+                    if (new[]{
+                            FormBodys.Any(),
+                            JsonBody!=null,
+                            RawContents.Any()
+                        }.Count(i => i == true) > 1)
+                    {
+                        throw new NotSupportedException("Not support multiple kinds of http content in a message!");
+                    }
+
+                    if (FormBodys.Any())
+                    {
+                        httpMessage.Content = new FormUrlEncodedContent(this.FormBodys);
+                    }
+                    else if (JsonBody != null)
+                    {
+                        httpMessage.Content = new StringContent(JsonBody.ToString(), Utf8Encoding, "application/json");
+                    }
+                    if (RawContents.Any())
+                    {
+                        httpMessage.Content = RawContents.FirstOrDefault();
+                    }
+                    //else if (StreamBodys.Any())
+                    //{
+                    //    var stream = StreamBodys.FirstOrDefault();
+                    //    httpMessage.Content = new StreamContent(stream.Item2);
+                    //    httpMessage.Content.Headers.ContentType = new MediaTypeHeaderValue(stream.Item1);
+                    //}
+                    //else if (Files.Any())
+                    //{
+                    //    var f = Files.FirstOrDefault();
+                    //    var content = new StreamContent(f.Value.OpenRead());
+                    //    content.Headers.ContentDisposition = new ContentDispositionHeaderValue(this.MultiPartAttribute.MultiPartType);
+                    //    content.Headers.ContentDisposition.FileName = f.Value.Name;
+                    //    content.Headers.ContentDisposition.Name = f.Key;
+                    //    content.Headers.ContentType = new MediaTypeHeaderValue(MimeMapping.GetMimeMapping(f.Value.Name));
+                    //    httpMessage.Content = content;
+                    //}
                 }
 
-                if (FormBodys.Any())
-                {
-                    httpMessage.Content = new FormUrlEncodedContent(this.FormBodys);
-                }
-                else if (JsonBody != null)
-                {
-                    httpMessage.Content = new StringContent(JsonBody.ToString(), Utf8Encoding, "application/json");
-                }
-                else if (StreamBody != null)
-                {
-                    httpMessage.Content = new StreamContent(this.StreamBody.Item2);
-                    httpMessage.Content.Headers.ContentType = new MediaTypeHeaderValue(StreamBody.Item1);
-                }
             }
             httpMessage.RequestUri = this.UriBuilder.Uri;
 
