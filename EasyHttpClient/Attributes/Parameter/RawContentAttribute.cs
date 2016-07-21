@@ -11,6 +11,13 @@ using System.Threading.Tasks;
 
 namespace EasyHttpClient.Attributes
 {
+    /// <summary>
+    /// Support type:
+    /// 1. HttpContent
+    /// 2. Stream
+    /// 3. byte[]
+    /// 4. String
+    /// </summary>
     [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false)]
     public class RawContentAttribute : Attribute, IParameterScopeAttribute
     {
@@ -43,7 +50,11 @@ namespace EasyHttpClient.Attributes
 
         public void ProcessParameter(HttpRequestMessageBuilder requestBuilder, ParameterInfo parameterInfo, object parameterValue)
         {
-            if (parameterValue is Stream)
+            if (parameterValue is HttpContent)
+            {
+                requestBuilder.RawContents.Add(parameterValue as HttpContent);
+            }
+            else if (parameterValue is Stream)
             {
                 var s = parameterValue as Stream;
                 var content = new StreamContent(s);
@@ -60,8 +71,7 @@ namespace EasyHttpClient.Attributes
             else
             {
                 var val = Convert.ToString(parameterInfo);
-                var s = new MemoryStream(Utf8Encoding.GetBytes(val));
-                var content = new StreamContent(s);
+                var content = new StringContent(val);
                 content.Headers.ContentType = new MediaTypeHeaderValue(this.ContentType);
                 requestBuilder.RawContents.Add(content);
             }
