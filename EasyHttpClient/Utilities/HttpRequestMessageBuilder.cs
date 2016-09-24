@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
 
@@ -21,6 +22,7 @@ namespace EasyHttpClient.Utilities
         public HttpMethod HttpMethod { get; set; }
         public UriBuilder UriBuilder { get; set; }
         public JsonSerializer JsonSerializer { get; private set; }
+
         private JsonSerializerSettings _jsonSetting;
         public JsonSerializerSettings JsonSetting
         {
@@ -37,7 +39,7 @@ namespace EasyHttpClient.Utilities
 
         public List<KeyValuePair<string, string>> Headers { get; private set; }
         public List<CookieHeaderValue> Cookies { get; private set; }
-        public List<KeyValuePair<string, string>> PathParams { get; private set; }
+        public Dictionary<string, string> PathParams { get; private set; }
         public List<KeyValuePair<string, string>> QueryStrings { get; private set; }
         public List<KeyValuePair<string, string>> FormBodys { get; private set; }
         public JToken JsonBody { get; set; }
@@ -60,7 +62,7 @@ namespace EasyHttpClient.Utilities
 
             this.Headers = new List<KeyValuePair<string, string>>();
             this.Cookies = new List<CookieHeaderValue>();
-            this.PathParams = new List<KeyValuePair<string, string>>();
+            this.PathParams = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             this.QueryStrings = new List<KeyValuePair<string, string>>();
             this.FormBodys = new List<KeyValuePair<string, string>>();
             //this.StreamBodys = new List<Tuple<string, Stream>>();
@@ -82,9 +84,9 @@ namespace EasyHttpClient.Utilities
             if (this.PathParams.Any())
             {
                 var path = HttpUtility.UrlDecode(UriBuilder.Path);
-                foreach (var p in this.PathParams.GroupBy(p => p.Key))
+                foreach (var p in this.PathParams)
                 {
-                    path = path.Replace("{" + p.Key + "}", string.Join(",", p.Select(i => i.Value)));
+                    path = path.Replace("{" + p.Key + "}", p.Value, StringComparison.OrdinalIgnoreCase);
                 }
                 UriBuilder.Path = HttpUtility.UrlPathEncode(path);
             }

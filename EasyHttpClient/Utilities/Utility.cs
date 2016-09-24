@@ -60,7 +60,7 @@ namespace EasyHttpClient.Utilities
                     var propertyValue = p.GetValue(value);
                     if (propertyValue != null)
                     {
-                        kps.AddRange(ExtractUrlParameter(pName, propertyValue, deep--));
+                        kps.AddRange(ExtractUrlParameter(pName, propertyValue, deep-1));
                     }
                 }
             }

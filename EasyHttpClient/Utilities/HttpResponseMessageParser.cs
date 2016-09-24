@@ -31,7 +31,7 @@ namespace EasyHttpClient.Utilities
                 {
                     if (returnObjectType.IsBulitInType())
                     {
-                        httpResult.Content = Convert.ChangeType(await responseMessage.Content.ReadAsStringAsync(), returnObjectType);
+                        httpResult.Content = ObjectExtensions.ChangeType(await responseMessage.Content.ReadAsStringAsync(), returnObjectType);
                         responseMessage.Dispose();
                     }
                     else if (typeof(Stream).IsAssignableFrom(returnObjectType))

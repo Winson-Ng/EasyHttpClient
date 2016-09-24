@@ -226,19 +226,34 @@ namespace EasyHttpClient
                                 ParameterInfo = p,
                                 ScopeAttributes = p.GetCustomAttributes().Where(a => a is IParameterScopeAttribute)
                                 .Cast<IParameterScopeAttribute>().ToArray()
-                            });
+                            }).ToList();
+
+                        var unhandledPathParamNames = pathParamNames.ToList();
+                        foreach (var p in attributedParameter)
+                        {
+                            foreach (var a in p.ScopeAttributes) {
+                                if (a is PathParamAttribute) {
+                                    var name = a.Name ?? p.ParameterInfo.Name;
+                                    if (unhandledPathParamNames.RemoveAll(i => string.Equals(i, name, StringComparison.OrdinalIgnoreCase)) > 0)
+                                    {
+                                        ((PathParamAttribute)a).PathParamNamesFilter = new string []{ name };
+                                    }
+                                    else {
+                                        ((PathParamAttribute)a).PathParamNamesFilter = pathParamNames;
+                                    }
+                                }
+                            }
+                        }
                         var nonAttributedParameter = parameters.Where(p => !p.GetCustomAttributes().Any(a => a is IParameterScopeAttribute)).Select(
                                 p =>
                                 {
                                     var attrList = new List<IParameterScopeAttribute>();
-
-                                    if (pathParamNames.Contains(p.Name, StringComparer.OrdinalIgnoreCase))
-                                    {
-                                        attrList.Add(new PathParamAttribute()
-                                        {
-                                            Name = p.Name
+                                    if (unhandledPathParamNames.Any()) {
+                                        attrList.Add(new PathParamAttribute() {
+                                            PathParamNamesFilter = unhandledPathParamNames.ToArray()
                                         });
                                     }
+
                                     attrList.Add(ParameterScopeAttributeFactory.CreateByHttpMethod(httpMethod, p));
 
                                     return new ParameterDescription()
@@ -247,7 +262,7 @@ namespace EasyHttpClient
                                         ScopeAttributes = attrList.ToArray()
                                     };
                                 }
-                            );
+                            ).ToList();
 
 
                         methodDescription = new MethodDescription(methodInfo)
@@ -340,7 +355,7 @@ namespace EasyHttpClient
                             methodDescription.MethodResultConveter = (methodCall, httpResultTask) =>
                             {
                                 var result = Task.Run(httpResultTask).Result;
-                                return new ReturnMessage(Convert.ChangeType(result, returnType), new object[0], 0, methodCall.LogicalCallContext, methodCall);
+                                return new ReturnMessage(ObjectExtensions.ChangeType(result, returnType), new object[0], 0, methodCall.LogicalCallContext, methodCall);
                             };
                         }
                         else if (returnType == typeof(void))
@@ -374,7 +389,7 @@ namespace EasyHttpClient
                             methodDescription.MethodResultConveter = (methodCall, httpResultTask) =>
                             {
                                 var result = Task.Run(httpResultTask).Result.Content;
-                                return new ReturnMessage(Convert.ChangeType(result, returnType), new object[0], 0, methodCall.LogicalCallContext, methodCall);
+                                return new ReturnMessage(ObjectExtensions.ChangeType(result, returnType), new object[0], 0, methodCall.LogicalCallContext, methodCall);
                             };
                         }
 
@@ -406,7 +421,7 @@ namespace EasyHttpClient
                     result.Add(g.Value);
                 }
             }
-            return result.Distinct().ToArray();
+            return result.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         }
 
     }
