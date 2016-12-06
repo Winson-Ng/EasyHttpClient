@@ -12,8 +12,9 @@ namespace EasyHttpClient.Attributes
     [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false)]
     public class CookieAttribute : Attribute, IParameterScopeAttribute
     {
-        public CookieAttribute() { 
-        
+        public CookieAttribute()
+        {
+
         }
         public CookieAttribute(string name)
         {
@@ -36,7 +37,8 @@ namespace EasyHttpClient.Attributes
 
         public void ProcessParameter(HttpRequestMessageBuilder requestBuilder, ParameterInfo parameterInfo, object parameterValue)
         {
-            var pathParams = Utility.ExtractUrlParameter(this.Name ?? parameterInfo.Name, parameterValue, 1);
+            var pFormatAttr = parameterInfo.GetCustomAttribute<StringFormatAttribute>() ?? requestBuilder.DefaultStringFormatter;
+            var pathParams = Utility.ExtractUrlParameter(this.Name ?? parameterInfo.Name, parameterValue, pFormatAttr, 1);
             foreach (var p in pathParams)
             {
                 requestBuilder.Cookies.Add(new CookieHeaderValue(p.Key, p.Value));

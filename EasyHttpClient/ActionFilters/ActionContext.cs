@@ -51,7 +51,7 @@ namespace EasyHttpClient.ActionFilters
         public HttpRequestMessageBuilder HttpRequestMessageBuilder
         {
             get;
-            internal set;
+            set;
         }
 
         public IHttpResult CreateHttpResult()
@@ -59,6 +59,11 @@ namespace EasyHttpClient.ActionFilters
 
             return (IHttpResult)Activator.CreateInstance(typeof(HttpResult<>).MakeGenericType(this.MethodDescription.HttpResultObjectType), this.HttpClientSettings.JsonSerializerSettings);
 
+        }
+
+        public IHttpResult<T> CreateHttpResult<T>()
+        {
+            return new HttpResult<T>(this.HttpClientSettings.JsonSerializerSettings);
         }
     }
 }

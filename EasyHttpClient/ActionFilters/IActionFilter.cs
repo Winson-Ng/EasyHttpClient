@@ -8,6 +8,9 @@ namespace EasyHttpClient.ActionFilters
 {
     public interface IActionFilter
     {
+        /// <summary>
+        /// The smaller is higher priority
+        /// </summary>
         int Order { get; set; }
 
         Task<IHttpResult> ActionInvoke(ActionContext context, Func<Task<IHttpResult>> Continuation);

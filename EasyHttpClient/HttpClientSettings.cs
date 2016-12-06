@@ -1,4 +1,5 @@
-﻿using EasyHttpClient.OAuth2;
+﻿using EasyHttpClient.ActionFilters;
+using EasyHttpClient.OAuth2;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using System;
@@ -19,6 +20,12 @@ namespace EasyHttpClient
             ContractResolver = new CamelCasePropertyNamesContractResolver()
         };
         public IOAuth2ClientHandler OAuth2ClientHandler { get; set; }
+
+        /// <summary>
+        /// Define the global action filters.
+        /// </summary>
+        public IList<IActionFilter> ActionFilters { get; private set; }
+
         public int MaxRetry { get; set; }
         //private JsonSerializerSettings _jsonSerializerSettings;
         public JsonSerializerSettings JsonSerializerSettings
@@ -36,6 +43,11 @@ namespace EasyHttpClient
 
         public JsonMediaTypeFormatter JsonMediaTypeFormatter { get; private set; }
 
+        /// <summary>
+        /// To handle non json http request parameter datetime formatting, and it can be overrided by [StringFormatAttribute("format")]
+        /// </summary>
+        public String DateTimeFormat { get; set; }
+
         public HttpClientSettings()
         {
             this.JsonMediaTypeFormatter = new JsonMediaTypeFormatter()
@@ -43,6 +55,7 @@ namespace EasyHttpClient
                 SerializerSettings = DefaultJsonSerializerSettings
             };
             //this.JsonSerializerSettings = DefaultJsonSerializerSettings;
+            this.ActionFilters = new List<IActionFilter>();
         }
     }
 }

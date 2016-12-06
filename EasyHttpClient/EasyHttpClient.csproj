@@ -80,6 +80,8 @@
     <Compile Include="Attributes\Parameter\CookieAttribute.cs" />
     <Compile Include="Attributes\Route\RoutePrefixAttribute.cs" />
     <Compile Include="Attributes\Route\RouteAttribute.cs" />
+    <Compile Include="Attributes\StringFormatAttribute.cs" />
+    <Compile Include="Exceptions\HttpResultException.cs" />
     <Compile Include="HttpClientSettings.cs" />
     <Compile Include="HttpClientWrapper.cs" />
     <Compile Include="HttpClientWrapperFactory.cs" />
@@ -94,10 +96,11 @@
     <Compile Include="MethodDescription.cs" />
     <Compile Include="Utilities\HttpRequestMessageBuilder.cs" />
     <Compile Include="Utilities\HttpRequestMessageExtension.cs" />
-    <Compile Include="Utilities\HttpResponseMessageParser.cs" />
+    <Compile Include="Utilities\HttpResultHelper.cs" />
     <Compile Include="HttpResult.cs" />
     <Compile Include="ParameterDescription.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="HttpNameValueCollection.cs" />
     <Compile Include="Utilities\StringExtensions.cs" />
     <Compile Include="Utilities\TaskExtensions.cs" />
     <Compile Include="Utilities\ObjectExtensions.cs" />

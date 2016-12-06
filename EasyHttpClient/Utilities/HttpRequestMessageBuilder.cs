@@ -18,6 +18,8 @@ namespace EasyHttpClient.Utilities
     {
         private static readonly Encoding Utf8Encoding = new UTF8Encoding(false);
 
+        internal StringFormatAttribute DefaultStringFormatter { get; private set; }
+
         public MultiPartAttribute MultiPartAttribute { get; set; }
         public HttpMethod HttpMethod { get; set; }
         public UriBuilder UriBuilder { get; set; }
@@ -37,11 +39,11 @@ namespace EasyHttpClient.Utilities
             }
         }
 
-        public List<KeyValuePair<string, string>> Headers { get; private set; }
+        public HttpNameValueCollection Headers { get; private set; }
         public List<CookieHeaderValue> Cookies { get; private set; }
         public Dictionary<string, string> PathParams { get; private set; }
-        public List<KeyValuePair<string, string>> QueryStrings { get; private set; }
-        public List<KeyValuePair<string, string>> FormBodys { get; private set; }
+        public HttpNameValueCollection QueryStrings { get; private set; }
+        public HttpNameValueCollection FormBodys { get; private set; }
         public JToken JsonBody { get; set; }
 
         /// <summary>
@@ -54,17 +56,17 @@ namespace EasyHttpClient.Utilities
 
         //public List<KeyValuePair<string, FileInfo>> Files { get; set; }
 
-        public HttpRequestMessageBuilder(HttpMethod httpMethod, UriBuilder uriBuilder, JsonSerializerSettings jsonSetting)
+        public HttpRequestMessageBuilder(HttpMethod httpMethod, UriBuilder uriBuilder, HttpClientSettings httpSettings)
         {
             this.HttpMethod = httpMethod;
             this.UriBuilder = uriBuilder;
-            this.JsonSetting = jsonSetting;
-
-            this.Headers = new List<KeyValuePair<string, string>>();
+            this.JsonSetting = httpSettings.JsonSerializerSettings;
+            this.DefaultStringFormatter = new StringFormatAttribute(httpSettings.DateTimeFormat);
+            this.Headers = new HttpNameValueCollection();
             this.Cookies = new List<CookieHeaderValue>();
             this.PathParams = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            this.QueryStrings = new List<KeyValuePair<string, string>>();
-            this.FormBodys = new List<KeyValuePair<string, string>>();
+            this.QueryStrings = new HttpNameValueCollection();
+            this.FormBodys = new HttpNameValueCollection();
             //this.StreamBodys = new List<Tuple<string, Stream>>();
             //this.Files = new List<KeyValuePair<string, FileInfo>>();
             this.RawContents = new List<HttpContent>();

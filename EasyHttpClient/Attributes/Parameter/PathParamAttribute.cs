@@ -36,7 +36,9 @@ namespace EasyHttpClient.Attributes
 
         public void ProcessParameter(HttpRequestMessageBuilder requestBuilder, ParameterInfo parameterInfo, object parameterValue)
         {
-            var processedParameters = Utility.ExtractUrlParameter(this.Name ?? parameterInfo.Name, parameterValue, 1);
+
+            var pFormatAttr = parameterInfo.GetCustomAttribute<StringFormatAttribute>() ?? requestBuilder.DefaultStringFormatter;
+            var processedParameters = Utility.ExtractUrlParameter(this.Name ?? parameterInfo.Name, parameterValue, pFormatAttr,1);
 
             foreach (var p in processedParameters.GroupBy(i=>i.Key))
             {

@@ -86,6 +86,22 @@ namespace EasyHttpClient
         const string MsgMissingSomething = @"{0}: Missing {1}";
         const string MsgMissingSomethingOn = @"{0}: Missing {1} on {2}";
 
+        private async Task<HttpResponseMessage> doSendHttpRequestAsync(HttpClient httpClient, HttpRequestMessage httpMessage)
+        {
+            try
+            {
+                return await httpClient.SendAsync(httpMessage);
+            }
+            catch (HttpRequestException ex)
+            {
+                return new HttpResponseMessage(HttpStatusCode.RequestTimeout)
+                {
+                    ReasonPhrase = "RequestTimeout",
+                    Content = new StringContent(ex.ToString())
+                };
+            }
+        }
+
         public override IMessage Invoke(IMessage msg)
         {
             var methodCall = msg as IMethodCallMessage;
@@ -106,7 +122,7 @@ namespace EasyHttpClient
                     , _routePrefixAttribute != null ? (_routePrefixAttribute.Prefix + "/") : ""
                     , actionContext.MethodDescription.Route));
 
-                actionContext.HttpRequestMessageBuilder = new HttpRequestMessageBuilder(actionContext.MethodDescription.HttpMethod, uriBuilder, _httpClientSettings.JsonSerializerSettings);
+                actionContext.HttpRequestMessageBuilder = new HttpRequestMessageBuilder(actionContext.MethodDescription.HttpMethod, uriBuilder, _httpClientSettings);
                 actionContext.HttpRequestMessageBuilder.MultiPartAttribute = actionContext.MethodDescription.MultiPartAttribute;
 
                 actionContext.ParameterValues = new Dictionary<string, object>();
@@ -144,14 +160,14 @@ namespace EasyHttpClient
                             if (actionContext.MethodDescription.AuthorizeRequired && _httpClientSettings.OAuth2ClientHandler != null)
                             {
                                 httpRequestTask = _httpClientSettings.OAuth2ClientHandler.SetAccessToken(httpMessage)
-                                    .Then(() => _httpClient.SendAsync(httpMessage)).Then(async response =>
+                                    .Then(() => doSendHttpRequestAsync(_httpClient, httpMessage)).Then(async response =>
                                     {
                                         if (response.StatusCode == HttpStatusCode.Unauthorized)
                                         {
                                             var newMessage = httpMessage.Clone();
                                             if (await _httpClientSettings.OAuth2ClientHandler.RefreshAccessToken(newMessage))
                                             {
-                                                response = await _httpClient.SendAsync(newMessage);
+                                                response = await doSendHttpRequestAsync(_httpClient, newMessage);
                                             }
                                         }
                                         return response;
@@ -159,10 +175,10 @@ namespace EasyHttpClient
                             }
                             else
                             {
-                                httpRequestTask = _httpClient.SendAsync(httpMessage);
+                                httpRequestTask = doSendHttpRequestAsync(_httpClient, httpMessage);
                             }
                             return httpRequestTask;
-                        }, (r) => Task.FromResult((int)r.StatusCode > 500), _httpClientSettings.MaxRetry)
+                        }, (r) => Task.FromResult((int)r.StatusCode > 500 || r.StatusCode == HttpStatusCode.RequestTimeout), _httpClientSettings.MaxRetry)
                         );
 
                 });
@@ -231,14 +247,17 @@ namespace EasyHttpClient
                         var unhandledPathParamNames = pathParamNames.ToList();
                         foreach (var p in attributedParameter)
                         {
-                            foreach (var a in p.ScopeAttributes) {
-                                if (a is PathParamAttribute) {
+                            foreach (var a in p.ScopeAttributes)
+                            {
+                                if (a is PathParamAttribute)
+                                {
                                     var name = a.Name ?? p.ParameterInfo.Name;
                                     if (unhandledPathParamNames.RemoveAll(i => string.Equals(i, name, StringComparison.OrdinalIgnoreCase)) > 0)
                                     {
-                                        ((PathParamAttribute)a).PathParamNamesFilter = new string []{ name };
+                                        ((PathParamAttribute)a).PathParamNamesFilter = new string[] { name };
                                     }
-                                    else {
+                                    else
+                                    {
                                         ((PathParamAttribute)a).PathParamNamesFilter = pathParamNames;
                                     }
                                 }
@@ -248,8 +267,10 @@ namespace EasyHttpClient
                                 p =>
                                 {
                                     var attrList = new List<IParameterScopeAttribute>();
-                                    if (unhandledPathParamNames.Any()) {
-                                        attrList.Add(new PathParamAttribute() {
+                                    if (unhandledPathParamNames.Any())
+                                    {
+                                        attrList.Add(new PathParamAttribute()
+                                        {
                                             PathParamNamesFilter = unhandledPathParamNames.ToArray()
                                         });
                                     }
@@ -272,7 +293,7 @@ namespace EasyHttpClient
                                                 methodInfo.IsDefined(typeof(AuthorizeAttribute)))
                                                 && !methodInfo.IsDefined(typeof(AllowAnonymousAttribute)),
                             Route = routeAttribute.Path,
-                            ActionFilters = methodInfo.GetCustomAttributes().Where(a => a is IActionFilter).Cast<IActionFilter>().OrderBy(i => i.Order).ToArray(),
+                            ActionFilters = _httpClientSettings.ActionFilters.Concat(methodInfo.GetCustomAttributes().Where(a => a is IActionFilter).Cast<IActionFilter>().OrderBy(i => i.Order)).ToArray(),
                             Parameters = attributedParameter.Union(nonAttributedParameter).ToArray()
                         };
 
@@ -395,7 +416,7 @@ namespace EasyHttpClient
 
                         methodDescription.HttpResultConverter = (httpTask) =>
                         {
-                            return httpTask.ParseAsHttpResult(methodDescription.HttpResultObjectType, _httpClientSettings);
+                            return httpTask.ToHttpResult(methodDescription.HttpResultObjectType, _httpClientSettings);
                         };
 
                         methodDescription.MultiPartAttribute = methodInfo.GetCustomAttribute<MultiPartAttribute>();

@@ -8,12 +8,19 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Reflection;
 using System.Collections;
+using EasyHttpClient.Attributes;
 
 namespace EasyHttpClient.Utilities
 {
     internal class Utility
     {
+
         public static IEnumerable<KeyValuePair<string, string>> ExtractUrlParameter(string name, object value, int deep)
+        {
+            return ExtractUrlParameter(name, value, new StringFormatAttribute(""), deep);
+        }
+
+        public static IEnumerable<KeyValuePair<string, string>> ExtractUrlParameter(string name, object value, StringFormatAttribute formatter, int deep)
         {
             if (deep < 0 || value == null)
                 return Enumerable.Empty<KeyValuePair<string, string>>();
@@ -21,7 +28,7 @@ namespace EasyHttpClient.Utilities
 
             Func<object, string> autoEncodeParameter = (val) =>
             {
-                return Convert.ToString(val, CultureInfo.InvariantCulture);
+                return formatter.Format(val, CultureInfo.InvariantCulture);
                 //return urlEncode?HttpUtility.UrlEncode(valStr):valStr;
             };
 
@@ -53,6 +60,7 @@ namespace EasyHttpClient.Utilities
                     }
                     var pName = p.Name;
                     var pNameAttr = p.GetCustomAttribute<HttpAliasAttribute>();
+                    var pFormatAttr = p.GetCustomAttribute<StringFormatAttribute>();
                     if (pNameAttr != null && !string.IsNullOrWhiteSpace(pNameAttr.Name))
                     {
                         pName = pNameAttr.Name;
@@ -60,7 +68,7 @@ namespace EasyHttpClient.Utilities
                     var propertyValue = p.GetValue(value);
                     if (propertyValue != null)
                     {
-                        kps.AddRange(ExtractUrlParameter(pName, propertyValue, deep-1));
+                        kps.AddRange(ExtractUrlParameter(pName, propertyValue, pFormatAttr ?? formatter, deep - 1));
                     }
                 }
             }

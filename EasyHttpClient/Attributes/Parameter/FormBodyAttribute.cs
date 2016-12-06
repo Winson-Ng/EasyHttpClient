@@ -13,8 +13,9 @@ namespace EasyHttpClient.Attributes
     [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false)]
     public class FormBodyAttribute : Attribute, IParameterScopeAttribute
     {
-        public FormBodyAttribute() { 
-        
+        public FormBodyAttribute()
+        {
+
         }
         public FormBodyAttribute(string name)
         {
@@ -37,7 +38,8 @@ namespace EasyHttpClient.Attributes
 
         public void ProcessParameter(HttpRequestMessageBuilder requestBuilder, ParameterInfo parameterInfo, object parameterValue)
         {
-            requestBuilder.FormBodys.AddRange(Utility.ExtractUrlParameter(this.Name ?? parameterInfo.Name, parameterValue, 1));
+            var pFormatAttr = parameterInfo.GetCustomAttribute<StringFormatAttribute>() ?? requestBuilder.DefaultStringFormatter;
+            requestBuilder.FormBodys.AddRange(Utility.ExtractUrlParameter(this.Name ?? parameterInfo.Name, parameterValue, pFormatAttr, 1));
         }
     }
 }

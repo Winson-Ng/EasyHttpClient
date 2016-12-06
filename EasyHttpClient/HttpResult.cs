@@ -13,19 +13,59 @@ namespace EasyHttpClient
 {
     public interface IHttpResult<T> : IHttpResult
     {
+        /// <summary>
+        /// Gets or sets the content of a HTTP response message. (For HTTP Success only)
+        /// 
+        /// Returns Deserialized <TofObject> from http response body
+        /// </summary>
         new T Content { get; set; }
     }
 
     public interface IHttpResult
     {
+        /// <summary>
+        /// Deserialize the error message as an Object, but please ensure the response message is a Json format. 
+        /// </summary>
+        /// <typeparam name="TofError"></typeparam>
+        /// <returns></returns>
+        /// <exception cref="Newtonsoft.Json.JsonException"></exception>
         TofError ErrorMessageAs<TofError>();
 
-        // Summary:
-        //     Gets or sets the content of a HTTP response message.
-        //
-        // Returns:
-        //     Returns System.Net.Http.HttpContent.The content of the HTTP response message.
+        /// <summary>
+        /// Deserialize the error message as an Object, but please ensure the response message is a Json format. 
+        /// </summary>
+        /// <typeparam name="TofError"></typeparam>
+        /// <returns></returns>
+        /// <exception cref="Newtonsoft.Json.JsonException"></exception>
+        TofError ErrorMessageAs<TofError>(JsonSerializerSettings jsonSerializerSettings);
+        /// <summary>
+        /// Deserialize the error message as an Object
+        /// </summary>
+        /// <typeparam name="TofError"></typeparam>
+        /// <param name="result"></param>
+        /// <returns></returns>
+        /// <exception cref="Newtonsoft.Json.JsonException"></exception>
+        bool TryConvertErrorMessage<TofError>(out TofError result);
+
+        /// <summary>
+        /// Deserialize the error message as an Object
+        /// </summary>
+        /// <typeparam name="TofError"></typeparam>
+        /// <param name="result"></param>
+        /// <returns></returns>
+        /// <exception cref="Newtonsoft.Json.JsonException"></exception>
+        bool TryConvertErrorMessage<TofError>(JsonSerializerSettings jsonSerializerSettings, out TofError result);
+
+        /// Gets or sets the content of a HTTP response message. (For HTTP Success only)
+        /// </summary>
+        /// <remarks>
+        /// Returns Deserialized Object from http response body
+        /// </remarks>
         object Content { get; set; }
+
+        /// <summary>
+        ///    Gets or sets the Http response body for fail case
+        /// </summary>
         string ErrorMessage { get; set; }
         /// <summary>
         /// They are:
@@ -37,46 +77,60 @@ namespace EasyHttpClient
         /// Allow, Content-Disposition, Content-Encoding, Content-Language, Content-Length, Content-Location, Content-MD5, Content-Range, Content-Type, Expires, LastModified
         /// </summary>
         HttpContentHeaders ContentHeaders { get; set; }
-        //
-        // Summary:
-        //     Gets a value that indicates if the HTTP response was successful.
-        //
-        // Returns:
-        //     Returns System.Boolean.A value that indicates if the HTTP response was successful.
-        //     true if System.Net.Http.HttpResponseMessage.StatusCode was in the range 200-299;
-        //     otherwise false.
+
+        /// <summary>
+        /// Gets a value that indicates if the HTTP response was successful.
+        /// 
+        /// Returns System.Boolean.A value that indicates if the HTTP response was successful.
+        /// true if System.Net.Http.HttpResponseMessage.StatusCode was in the range 200-299;
+        /// otherwise false.
+        /// </summary>
         bool IsSuccessStatusCode { get; set; }
-        //
-        // Summary:
-        //     Gets or sets the reason phrase which typically is sent by servers together
-        //     with the status code.
-        //
-        // Returns:
-        //     Returns System.String.The reason phrase sent by the server.
+
+        /// <summary>
+        /// Gets or sets the reason phrase which typically is sent by servers together
+        ///     with the status code.
+        ///
+        /// Returns System.String.The reason phrase sent by the server.
+        /// </summary>
         string ReasonPhrase { get; set; }
-        //
-        // Summary:
-        //     Gets or sets the status code of the HTTP response.
-        //
-        // Returns:
-        //     Returns System.Net.HttpStatusCode.The status code of the HTTP response.
+
+        /// <summary>
+        /// Gets or sets the status code of the HTTP response.
+        /// 
+        /// Returns System.Net.HttpStatusCode.The status code of the HTTP response.
+        /// </summary>
         HttpStatusCode StatusCode { get; set; }
-        //
-        // Summary:
-        //     Gets or sets the HTTP message version.
-        //
-        // Returns:
-        //     Returns System.Version.The HTTP message version. The default is 1.1.
+
+        /// <summary>
+        /// Gets or sets the HTTP message version.
+        /// 
+        /// Returns System.Version.The HTTP message version. The default is 1.1.
+        /// </summary>
         Version Version { get; set; }
+
+        /// <summary>
+        /// Will use for functions ErrorMessageAs<TofError>() and TryConvertErrorMessage<TofError>(out TofError result). 
+        /// </summary>
+        JsonSerializerSettings JsonSerializerSettings { get; set; }
+
+
+        HttpRequestMessage RequestMessage { get; set; }
     }
 
-    internal class HttpResult<T> : IHttpResult<T>, IConvertible
+    public class HttpResult<T> : IHttpResult<T>, IConvertible
     {
-        private JsonSerializerSettings _jsonSetting;
+        public JsonSerializerSettings JsonSerializerSettings { get; set; }
+
+        public HttpResult()
+            : this(new JsonSerializerSettings())
+        {
+
+        }
 
         public HttpResult(JsonSerializerSettings jsonSetting)
         {
-            this._jsonSetting = jsonSetting;
+            this.JsonSerializerSettings = jsonSetting;
         }
 
         public HttpResponseHeaders Headers
@@ -209,7 +263,7 @@ namespace EasyHttpClient
 
         public string ToString(IFormatProvider provider)
         {
-            return this.Content.ToString();
+            return this.Content == null ? null : this.Content.ToString();
         }
 
         public object ToType(Type conversionType, IFormatProvider provider)
@@ -239,11 +293,40 @@ namespace EasyHttpClient
 
         public TofError ErrorMessageAs<TofError>()
         {
-            return this.ErrorMessageAs<TofError>(this._jsonSetting);
+            return this.ErrorMessageAs<TofError>(this.JsonSerializerSettings);
         }
+
         public TofError ErrorMessageAs<TofError>(JsonSerializerSettings _jsonSerializerSettings)
         {
             return JsonConvert.DeserializeObject<TofError>(this.ErrorMessage, _jsonSerializerSettings);
+        }
+
+
+        public bool TryConvertErrorMessage<TofError>(out TofError result)
+        {
+            return TryConvertErrorMessage<TofError>(this.JsonSerializerSettings, out result);
+        }
+
+        public bool TryConvertErrorMessage<TofError>(JsonSerializerSettings _jsonSerializerSettings, out TofError result)
+        {
+            result = default(TofError);
+
+            try
+            {
+                result = JsonConvert.DeserializeObject<TofError>(this.ErrorMessage, _jsonSerializerSettings);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
+
+
+        public HttpRequestMessage RequestMessage
+        {
+            get;
+            set;
         }
     }
 }
