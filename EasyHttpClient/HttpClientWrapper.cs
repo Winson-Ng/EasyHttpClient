@@ -21,6 +21,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
+using EasyHttpClient.Attributes.Parameter;
 
 namespace EasyHttpClient
 {
@@ -47,6 +48,7 @@ namespace EasyHttpClient
 
         private readonly MethodInfo CastObjectTaskMethod = typeof(EasyHttpClient.Utilities.TaskExtensions).GetMethod("CastObjectTask");
 
+        private static readonly MethodInfo[] _reservedMethods = typeof(object).GetMethods();
         /************
 
          * *************/
@@ -60,6 +62,7 @@ namespace EasyHttpClient
         private bool _authorizeRequired;
         private Type _objectType;
         //private IHttpClientProvider _httpClientProvider { get; set; }
+
 
         public HttpClientWrapper(
             Type objectType,
@@ -86,19 +89,63 @@ namespace EasyHttpClient
         const string MsgMissingSomething = @"{0}: Missing {1}";
         const string MsgMissingSomethingOn = @"{0}: Missing {1} on {2}";
 
-        private async Task<HttpResponseMessage> doSendHttpRequestAsync(HttpClient httpClient, HttpRequestMessage httpMessage)
+        private async Task<HttpResponseMessage> doSendHttpRequestAsync(HttpClient httpClient, ActionContext actionContext)
         {
             try
             {
-                return await httpClient.SendAsync(httpMessage);
+                if (actionContext.HttpResponseMessage == null)
+                {
+                    actionContext.HttpResponseMessage = await httpClient.SendAsync(actionContext.HttpRequestMessage);
+                }
+                return actionContext.HttpResponseMessage;
             }
             catch (HttpRequestException ex)
             {
                 return new HttpResponseMessage(HttpStatusCode.RequestTimeout)
                 {
+                    RequestMessage = actionContext.HttpRequestMessage,
                     ReasonPhrase = "RequestTimeout",
                     Content = new StringContent(ex.ToString())
                 };
+            }
+            catch (WebException we)
+            {
+                switch (we.Status)
+                {
+                    case WebExceptionStatus.Timeout:
+                        return new HttpResponseMessage(HttpStatusCode.RequestTimeout)
+                        {
+                            RequestMessage = actionContext.HttpRequestMessage,
+                            ReasonPhrase = HttpStatusCode.RequestTimeout.ToString(),
+                            Content = new StringContent(we.ToString())
+                        };
+                    case WebExceptionStatus.ConnectFailure:
+                    case WebExceptionStatus.ConnectionClosed:
+                    case WebExceptionStatus.PipelineFailure:
+                        return new HttpResponseMessage((HttpStatusCode)599)
+                        {
+                            RequestMessage = actionContext.HttpRequestMessage,
+                            ReasonPhrase = we.Status.ToString(),
+                            Content = new StringContent(we.ToString())
+                        };
+                    //case WebExceptionStatus.NameResolutionFailure:
+                    //case WebExceptionStatus.ProxyNameResolutionFailure:
+                    //    return new HttpResponseMessage((HttpStatusCode)523)
+                    //    {
+                    //        ReasonPhrase = we.Status.ToString(),
+                    //        Content = new StringContent(we.ToString())
+                    //    };
+                    case WebExceptionStatus.SecureChannelFailure:
+                    case WebExceptionStatus.TrustFailure:
+                        return new HttpResponseMessage((HttpStatusCode)525)
+                        {
+                            RequestMessage = actionContext.HttpRequestMessage,
+                            ReasonPhrase = we.Status.ToString(),
+                            Content = new StringContent(we.ToString())
+                        };
+                    default:
+                        throw;
+                }
             }
         }
 
@@ -107,7 +154,15 @@ namespace EasyHttpClient
             var methodCall = msg as IMethodCallMessage;
             try
             {
+                if (_reservedMethods.Contains(methodCall.MethodBase))
+                {
+                    var unRegisteredReturn = methodCall.MethodName.Equals("GetType") ? _objectType : methodCall.MethodBase.Invoke(this, methodCall.Args);
+                    var outArgs = methodCall.Args.Where(a => !methodCall.InArgs.Any(i => i == a)).ToArray();
+                    return new ReturnMessage(unRegisteredReturn, outArgs, outArgs.Length, methodCall.LogicalCallContext, methodCall);
+                }
+
                 var actionContext = new ActionContext(methodCall);
+                actionContext.HttpClientSettings = _httpClientSettings;
                 //var _httpClient = this._httpClientProvider.GetClient();
                 if (methodCall == null)
                 {
@@ -125,7 +180,7 @@ namespace EasyHttpClient
                 actionContext.HttpRequestMessageBuilder = new HttpRequestMessageBuilder(actionContext.MethodDescription.HttpMethod, uriBuilder, _httpClientSettings);
                 actionContext.HttpRequestMessageBuilder.MultiPartAttribute = actionContext.MethodDescription.MultiPartAttribute;
 
-                actionContext.ParameterValues = new Dictionary<string, object>();
+                actionContext.ParameterValues = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 
                 if (methodCall.InArgCount > 0)
                 {
@@ -154,20 +209,22 @@ namespace EasyHttpClient
                     return actionContext.MethodDescription.HttpResultConverter(
                         EasyHttpClient.Utilities.TaskExtensions.Retry<HttpResponseMessage>(() =>
                         {
-                            var httpMessage = actionContext.HttpRequestMessageBuilder.Build();
+                            if (actionContext.HttpRequestMessage == null)
+                                actionContext.HttpRequestMessage = actionContext.HttpRequestMessageBuilder.Build();
 
                             Task<HttpResponseMessage> httpRequestTask;
                             if (actionContext.MethodDescription.AuthorizeRequired && _httpClientSettings.OAuth2ClientHandler != null)
                             {
-                                httpRequestTask = _httpClientSettings.OAuth2ClientHandler.SetAccessToken(httpMessage)
-                                    .Then(() => doSendHttpRequestAsync(_httpClient, httpMessage)).Then(async response =>
+                                httpRequestTask = _httpClientSettings.OAuth2ClientHandler.SetAccessToken(actionContext.HttpRequestMessage)
+                                    .Then(() => doSendHttpRequestAsync(_httpClient, actionContext))
+                                    .Then(async response =>
                                     {
                                         if (response.StatusCode == HttpStatusCode.Unauthorized)
                                         {
-                                            var newMessage = httpMessage.Clone();
-                                            if (await _httpClientSettings.OAuth2ClientHandler.RefreshAccessToken(newMessage))
+                                            actionContext.HttpRequestMessage = actionContext.HttpRequestMessage.Clone();
+                                            if (await _httpClientSettings.OAuth2ClientHandler.RefreshAccessToken(actionContext.HttpRequestMessage))
                                             {
-                                                response = await doSendHttpRequestAsync(_httpClient, newMessage);
+                                                response = await doSendHttpRequestAsync(_httpClient, actionContext);
                                             }
                                         }
                                         return response;
@@ -175,15 +232,15 @@ namespace EasyHttpClient
                             }
                             else
                             {
-                                httpRequestTask = doSendHttpRequestAsync(_httpClient, httpMessage);
+                                httpRequestTask = doSendHttpRequestAsync(_httpClient, actionContext);
                             }
                             return httpRequestTask;
                         }, (r) => Task.FromResult((int)r.StatusCode > 500 || r.StatusCode == HttpStatusCode.RequestTimeout), _httpClientSettings.MaxRetry)
-                        );
+                        , actionContext);
 
                 });
 
-                return actionContext.MethodDescription.MethodResultConveter(methodCall, httpResultTaskFunc);
+                return actionContext.MethodDescription.MethodResultConveter(methodCall, httpResultTaskFunc, actionContext);
             }
             catch (Exception ex)
             {
@@ -236,7 +293,7 @@ namespace EasyHttpClient
                         var pathParamNames = ExtractParameterNames(routeAttribute.Path);
                         var parameters = methodInfo.GetParameters();
                         var attributedParameter = parameters
-                            .Where(p => p.GetCustomAttributes().Any(a => a is IParameterScopeAttribute))
+                            .Where(p => p.GetCustomAttributes().Any(a => a is IParameterScopeAttribute) && !p.IsDefined(typeof(HttpIgnoreAttribute)))
                             .Select(p => new ParameterDescription()
                             {
                                 ParameterInfo = p,
@@ -263,7 +320,8 @@ namespace EasyHttpClient
                                 }
                             }
                         }
-                        var nonAttributedParameter = parameters.Where(p => !p.GetCustomAttributes().Any(a => a is IParameterScopeAttribute)).Select(
+                        var nonAttributedParameter = parameters.Where(p => !p.GetCustomAttributes().Any(a => a is IParameterScopeAttribute) && !p.IsDefined(typeof(HttpIgnoreAttribute)))
+                            .Select(
                                 p =>
                                 {
                                     var attrList = new List<IParameterScopeAttribute>();
@@ -294,32 +352,38 @@ namespace EasyHttpClient
                                                 && !methodInfo.IsDefined(typeof(AllowAnonymousAttribute)),
                             Route = routeAttribute.Path,
                             ActionFilters = _httpClientSettings.ActionFilters.Concat(methodInfo.GetCustomAttributes().Where(a => a is IActionFilter).Cast<IActionFilter>().OrderBy(i => i.Order)).ToArray(),
-                            Parameters = attributedParameter.Union(nonAttributedParameter).ToArray()
+                            Parameters = attributedParameter.Union(nonAttributedParameter).ToArray(),
+                            ReturnTypeDescription = new ReturnTypeDescription()
                         };
 
                         var returnType = methodInfo.ReturnType;
+                        methodDescription.ReturnTypeDescription.ReturnType = methodInfo.ReturnType;
+                        methodDescription.ReturnTypeDescription.TargetObjectType = methodInfo.ReturnType;
+                        methodDescription.ReturnTypeDescription.HttpResultDecoder = methodInfo.GetCustomAttributes().FirstOrDefault(c => c is IHttpResultDecoder) as IHttpResultDecoder ?? _httpClientSettings.HttpResultDecoder;
 
                         if (typeof(Task).IsAssignableFrom(returnType) && returnType.IsGenericType)
                         {
-                            methodDescription.TaskObjectType = returnType.GenericTypeArguments[0];
-                            if (typeof(IHttpResult).IsAssignableFrom(methodDescription.TaskObjectType))
+                            var taskObjectType = returnType.GenericTypeArguments[0];
+                            if (typeof(IHttpResult).IsAssignableFrom(taskObjectType))
                             {
                                 /************
                                  * Task<IHttpResult<TResult>>, 
                                  * Task<IHttpResult>
                                  * ***********/
-                                if (methodDescription.TaskObjectType.IsGenericType)
+                                if (taskObjectType.IsGenericType)
                                 {
-                                    methodDescription.HttpResultObjectType = methodDescription.TaskObjectType.GenericTypeArguments[0];
+                                    methodDescription.ReturnTypeDescription.HttpResultType = taskObjectType.IsClass ? taskObjectType : typeof(HttpResult<>);
+                                    methodDescription.ReturnTypeDescription.TargetObjectType = taskObjectType.GenericTypeArguments[0];
                                 }
                                 else
                                 {
-                                    methodDescription.HttpResultObjectType = typeof(object);
+                                    methodDescription.ReturnTypeDescription.HttpResultType = taskObjectType.IsClass ? taskObjectType : typeof(HttpResult<>);
+                                    methodDescription.ReturnTypeDescription.TargetObjectType = typeof(object);
                                 }
 
-                                methodDescription.MethodResultConveter = (methodCall, httpResultTask) =>
+                                methodDescription.MethodResultConveter = (methodCall, httpResultTask, actionContext) =>
                                 {
-                                    var result = CastHttpResultTaskMethod.MakeGenericMethod(methodDescription.TaskObjectType).Invoke(null, new object[] { httpResultTask() });
+                                    var result = CastHttpResultTaskMethod.MakeGenericMethod(taskObjectType).Invoke(null, new object[] { httpResultTask() });
                                     return new ReturnMessage(result, new object[0], 0, methodCall.LogicalCallContext, methodCall);
                                 };
                             }
@@ -328,11 +392,11 @@ namespace EasyHttpClient
                                 /*************
                                  * Task<TResult>
                                  * *************/
-                                methodDescription.HttpResultObjectType = returnType.GenericTypeArguments[0];
+                                methodDescription.ReturnTypeDescription.TargetObjectType = returnType.GenericTypeArguments[0];
 
-                                methodDescription.MethodResultConveter = (methodCall, httpResultTask) =>
+                                methodDescription.MethodResultConveter = (methodCall, httpResultTask, actionContext) =>
                                 {
-                                    var result = CastObjectTaskMethod.MakeGenericMethod(methodDescription.TaskObjectType).Invoke(null, new object[] { httpResultTask() });
+                                    var result = CastObjectTaskMethod.MakeGenericMethod(taskObjectType).Invoke(null, new object[] { httpResultTask() });
                                     return new ReturnMessage(result, new object[0], 0, methodCall.LogicalCallContext, methodCall);
                                 };
                             }
@@ -343,10 +407,10 @@ namespace EasyHttpClient
                              * Task
                              * *************/
 
-                            methodDescription.TaskObjectType = typeof(void);
-                            methodDescription.HttpResultObjectType = typeof(object);
+                            var taskObjectType = typeof(void);
+                            methodDescription.ReturnTypeDescription.TargetObjectType = typeof(object);
 
-                            methodDescription.MethodResultConveter = (methodCall, httpResultTask) =>
+                            methodDescription.MethodResultConveter = (methodCall, httpResultTask, actionContext) =>
                             {
                                 return new ReturnMessage(httpResultTask().Then(t =>
                                 {
@@ -364,16 +428,18 @@ namespace EasyHttpClient
                              * IHttpResult
                              * ************/
 
-                            methodDescription.TaskObjectType = returnType;
+                            var taskObjectType = returnType;
                             if (returnType.IsGenericType)
                             {
-                                methodDescription.HttpResultObjectType = returnType.GenericTypeArguments[0];
+                                methodDescription.ReturnTypeDescription.HttpResultType = returnType.IsClass ? returnType : typeof(HttpResult<>);
+                                methodDescription.ReturnTypeDescription.TargetObjectType = returnType.GenericTypeArguments[0];
                             }
                             else
                             {
-                                methodDescription.HttpResultObjectType = typeof(object);
+                                methodDescription.ReturnTypeDescription.HttpResultType = returnType.IsClass ? returnType : typeof(HttpResult<>);
+                                methodDescription.ReturnTypeDescription.TargetObjectType = typeof(object);
                             }
-                            methodDescription.MethodResultConveter = (methodCall, httpResultTask) =>
+                            methodDescription.MethodResultConveter = (methodCall, httpResultTask, actionContext) =>
                             {
                                 var result = Task.Run(httpResultTask).Result;
                                 return new ReturnMessage(ObjectExtensions.ChangeType(result, returnType), new object[0], 0, methodCall.LogicalCallContext, methodCall);
@@ -384,10 +450,10 @@ namespace EasyHttpClient
                             /*************
                              * void
                              * ***********/
-                            methodDescription.TaskObjectType = typeof(void);
-                            methodDescription.HttpResultObjectType = typeof(object);
+                            var taskObjectType = typeof(void);
+                            methodDescription.ReturnTypeDescription.TargetObjectType = typeof(object);
 
-                            methodDescription.MethodResultConveter = (methodCall, httpResultTask) =>
+                            methodDescription.MethodResultConveter = (methodCall, httpResultTask, actionContext) =>
                             {
                                 var t = Task.Run(httpResultTask).Result;
                                 if (!t.IsSuccessStatusCode)
@@ -404,19 +470,19 @@ namespace EasyHttpClient
                              * object
                              * ************/
 
-                            methodDescription.TaskObjectType = returnType;
-                            methodDescription.HttpResultObjectType = returnType;
+                            var taskObjectType = returnType;
+                            methodDescription.ReturnTypeDescription.TargetObjectType = returnType;
 
-                            methodDescription.MethodResultConveter = (methodCall, httpResultTask) =>
+                            methodDescription.MethodResultConveter = (methodCall, httpResultTask, actionContext) =>
                             {
                                 var result = Task.Run(httpResultTask).Result.Content;
                                 return new ReturnMessage(ObjectExtensions.ChangeType(result, returnType), new object[0], 0, methodCall.LogicalCallContext, methodCall);
                             };
                         }
 
-                        methodDescription.HttpResultConverter = (httpTask) =>
+                        methodDescription.HttpResultConverter = (httpTask, actionContext) =>
                         {
-                            return httpTask.ToHttpResult(methodDescription.HttpResultObjectType, _httpClientSettings);
+                            return httpTask.ToHttpResult(methodDescription.ReturnTypeDescription.TargetObjectType, actionContext);
                         };
 
                         methodDescription.MultiPartAttribute = methodInfo.GetCustomAttribute<MultiPartAttribute>();

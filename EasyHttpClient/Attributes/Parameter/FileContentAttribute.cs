@@ -43,6 +43,7 @@ namespace EasyHttpClient.Attributes
 
         public void ProcessParameter(HttpRequestMessageBuilder requestBuilder, ParameterInfo parameterInfo, object parameterValue)
         {
+            var dispositionName = "\""+(!string.IsNullOrWhiteSpace(this.Name) ? this.Name : parameterInfo.Name)+"\"";
             var contentDisposition = new ContentDispositionHeaderValue(
                     requestBuilder.MultiPartAttribute != null ? requestBuilder.MultiPartAttribute.MultiPartType : MultiPartType.FormData
                     );
@@ -53,7 +54,7 @@ namespace EasyHttpClient.Attributes
                 var content = new StreamContent(f.OpenRead());
                 content.Headers.ContentDisposition = contentDisposition;
                 content.Headers.ContentDisposition.FileName = f.Name;
-                content.Headers.ContentDisposition.Name = parameterInfo.Name;
+                content.Headers.ContentDisposition.Name = dispositionName;
                 content.Headers.ContentType = new MediaTypeHeaderValue(!string.IsNullOrWhiteSpace(this.ContentType) ? this.ContentType : MimeMapping.GetMimeMapping(f.Name));
 
                 requestBuilder.RawContents.Add(content);
@@ -64,7 +65,7 @@ namespace EasyHttpClient.Attributes
                 var content = new StreamContent(f.OpenRead());
                 content.Headers.ContentDisposition = contentDisposition;
                 content.Headers.ContentDisposition.FileName = f.Name;
-                content.Headers.ContentDisposition.Name = parameterInfo.Name;
+                content.Headers.ContentDisposition.Name = dispositionName;
                 content.Headers.ContentType = new MediaTypeHeaderValue(!string.IsNullOrWhiteSpace(this.ContentType) ? this.ContentType : MimeMapping.GetMimeMapping(f.Name));
 
                 requestBuilder.RawContents.Add(content);
@@ -75,7 +76,7 @@ namespace EasyHttpClient.Attributes
                 var content = new StreamContent(s);
                 content.Headers.ContentDisposition = contentDisposition;
                 content.Headers.ContentDisposition.FileName = s.Name;
-                content.Headers.ContentDisposition.Name = parameterInfo.Name;
+                content.Headers.ContentDisposition.Name = dispositionName;
                 content.Headers.ContentType = new MediaTypeHeaderValue(!string.IsNullOrWhiteSpace(this.ContentType) ? this.ContentType : MimeMapping.GetMimeMapping(s.Name));
                 requestBuilder.RawContents.Add(content);
             }

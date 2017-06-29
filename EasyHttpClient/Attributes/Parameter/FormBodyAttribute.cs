@@ -39,7 +39,19 @@ namespace EasyHttpClient.Attributes
         public void ProcessParameter(HttpRequestMessageBuilder requestBuilder, ParameterInfo parameterInfo, object parameterValue)
         {
             var pFormatAttr = parameterInfo.GetCustomAttribute<StringFormatAttribute>() ?? requestBuilder.DefaultStringFormatter;
-            requestBuilder.FormBodys.AddRange(Utility.ExtractUrlParameter(this.Name ?? parameterInfo.Name, parameterValue, pFormatAttr, 1));
+
+            if (requestBuilder.MultiPartAttribute != null)
+            {
+                var multiPartType = requestBuilder.MultiPartAttribute.MultiPartType;
+                if (string.IsNullOrWhiteSpace(multiPartType))
+                    multiPartType = MultiPartType.FormData;
+                requestBuilder.RawContents.AddRange(Utility.ExtractMultipleFormContent(this.Name ?? parameterInfo.Name, parameterValue, pFormatAttr, 1, multiPartType));
+            }
+            else
+            {
+                requestBuilder.FormBodys.AddRange(Utility.ExtractUrlParameter(this.Name ?? parameterInfo.Name, parameterValue, pFormatAttr, 1));
+            }
+
         }
     }
 }

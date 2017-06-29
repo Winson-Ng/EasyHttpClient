@@ -50,31 +50,45 @@ namespace EasyHttpClient.Attributes
 
         public void ProcessParameter(HttpRequestMessageBuilder requestBuilder, ParameterInfo parameterInfo, object parameterValue)
         {
+            HttpContent content = null;
             if (parameterValue is HttpContent)
             {
-                requestBuilder.RawContents.Add(parameterValue as HttpContent);
-            }
-            else if (parameterValue is Stream)
-            {
-                var s = parameterValue as Stream;
-                var content = new StreamContent(s);
-                content.Headers.ContentType = new MediaTypeHeaderValue(this.ContentType);
-                requestBuilder.RawContents.Add(content);
-            }
-            else if (parameterValue is IEnumerable<byte>)
-            {
-                var s = new MemoryStream((parameterValue as IEnumerable<byte>).ToArray());
-                var content = new StreamContent(s);
-                content.Headers.ContentType = new MediaTypeHeaderValue(this.ContentType);
-                requestBuilder.RawContents.Add(content);
+                content = parameterValue as HttpContent;
             }
             else
             {
-                var val = Convert.ToString(parameterInfo);
-                var content = new StringContent(val);
-                content.Headers.ContentType = new MediaTypeHeaderValue(this.ContentType);
-                requestBuilder.RawContents.Add(content);
+
+                var dispositionName = "\"" + (!string.IsNullOrWhiteSpace(this.Name) ? this.Name : parameterInfo.Name) + "\"";
+                var contentDisposition = new ContentDispositionHeaderValue(
+                        requestBuilder.MultiPartAttribute != null ? requestBuilder.MultiPartAttribute.MultiPartType : MultiPartType.FormData
+                        );
+
+                if (parameterValue is Stream)
+                {
+                    var s = parameterValue as Stream;
+                    content = new StreamContent(s);
+                }
+                else if (parameterValue is IEnumerable<byte>)
+                {
+                    var s = new MemoryStream((parameterValue as IEnumerable<byte>).ToArray());
+                    content = new StreamContent(s);
+                }
+                else
+                {
+                    var val = Convert.ToString(parameterValue);
+                    content = new StringContent(val);
+                }
+
+                if (!string.IsNullOrWhiteSpace(this.ContentType))
+                    content.Headers.ContentType = new MediaTypeHeaderValue(this.ContentType);
+
+                content.Headers.ContentDisposition = contentDisposition;
+                content.Headers.ContentDisposition.Name = dispositionName;
+
             }
+
+            requestBuilder.RawContents.Add(content);
+
         }
     }
 }

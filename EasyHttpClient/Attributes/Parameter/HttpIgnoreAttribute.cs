@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace EasyHttpClient.Attributes.Parameter
 {
-    [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false)]
+    [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Parameter, AllowMultiple = false)]
     public class HttpIgnoreAttribute : Attribute
     {
     }

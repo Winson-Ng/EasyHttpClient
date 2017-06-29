@@ -6,8 +6,11 @@ using System.Threading.Tasks;
 
 namespace EasyHttpClient.Attributes
 {
-    public static class MultiPartType
+    public class MultiPartType
     {
+        private MultiPartType() { 
+        
+        }
         public const string Mixed = "mixed";
         public const string FormData = "form-data";
         public const string Related = "Related";
