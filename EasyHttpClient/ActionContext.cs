@@ -75,7 +75,7 @@ namespace EasyHttpClient
         public HttpRequestMessage HttpRequestMessage
         {
             get;
-            set;
+            internal set;
         }
         /// <summary>
         /// Pls note, it won't send out HTTP request if not null
@@ -83,7 +83,7 @@ namespace EasyHttpClient
         public HttpResponseMessage HttpResponseMessage
         {
             get;
-            set;
+            internal set;
         }
 
 

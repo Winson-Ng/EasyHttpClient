@@ -93,10 +93,7 @@ namespace EasyHttpClient
         {
             try
             {
-                if (actionContext.HttpResponseMessage == null)
-                {
-                    actionContext.HttpResponseMessage = await httpClient.SendAsync(actionContext.HttpRequestMessage);
-                }
+                actionContext.HttpResponseMessage = await httpClient.SendAsync(actionContext.HttpRequestMessage);
                 return actionContext.HttpResponseMessage;
             }
             catch (HttpRequestException ex)
@@ -209,8 +206,7 @@ namespace EasyHttpClient
                     return actionContext.MethodDescription.HttpResultConverter(
                         EasyHttpClient.Utilities.TaskExtensions.Retry<HttpResponseMessage>(() =>
                         {
-                            if (actionContext.HttpRequestMessage == null)
-                                actionContext.HttpRequestMessage = actionContext.HttpRequestMessageBuilder.Build();
+                            actionContext.HttpRequestMessage = actionContext.HttpRequestMessageBuilder.Build();
 
                             Task<HttpResponseMessage> httpRequestTask;
                             if (actionContext.MethodDescription.AuthorizeRequired && _httpClientSettings.OAuth2ClientHandler != null)
@@ -221,7 +217,7 @@ namespace EasyHttpClient
                                     {
                                         if (response.StatusCode == HttpStatusCode.Unauthorized)
                                         {
-                                            actionContext.HttpRequestMessage = actionContext.HttpRequestMessage.Clone();
+                                            actionContext.HttpRequestMessage = actionContext.HttpRequestMessageBuilder.Build();
                                             if (await _httpClientSettings.OAuth2ClientHandler.RefreshAccessToken(actionContext.HttpRequestMessage))
                                             {
                                                 response = await doSendHttpRequestAsync(_httpClient, actionContext);
