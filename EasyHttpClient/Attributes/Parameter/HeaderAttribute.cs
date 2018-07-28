@@ -32,6 +32,11 @@ namespace EasyHttpClient.Attributes
             set;
         }
 
+        internal void ProcessParameter(HttpRequestMessageBuilder requestBuilder, object parameterValue)
+        {
+            var pFormatAttr = requestBuilder.DefaultStringFormatter;
+            requestBuilder.Headers.AddRange(Utility.ExtractUrlParameter(this.Name, parameterValue, pFormatAttr, 1));
+        }
         public void ProcessParameter(HttpRequestMessageBuilder requestBuilder, ParameterInfo parameterInfo, object parameterValue)
         {
             var pFormatAttr = parameterInfo.GetCustomAttribute<StringFormatAttribute>() ?? requestBuilder.DefaultStringFormatter;

@@ -17,10 +17,23 @@ namespace EasyHttpClient
     {
         public virtual HttpClient GetClient(HttpClientSettings clientSetting, params DelegatingHandler[] handlers)
         {
-            return HttpClientFactory.Create(new HttpClientHandler()
+            HttpClient httpClient = null;
+            if (clientSetting.AutomaticDecompression)
             {
-                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
-            }, handlers);
+                var internalHandler = new HttpClientHandler()
+                {
+                    AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+                };
+                httpClient= HttpClientFactory.Create(internalHandler, handlers);
+            }
+            else
+            {
+                httpClient= HttpClientFactory.Create(handlers);
+            }
+
+            httpClient.Timeout = clientSetting.Timeout;
+
+            return httpClient;
         }
     }
 }

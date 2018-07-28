@@ -56,7 +56,7 @@ namespace EasyHttpClient
         #endregion
         public object CreateFor(Type type, Uri host)
         {
-            var client = HttpClientProvider.GetClient(this.HttpClientSettings);
+            var client = HttpClientProvider.GetClient(this.HttpClientSettings, this.HttpClientSettings.DelegatingHandlers.Select(i=>i()).ToArray());
             var proxyClass = new HttpClientWrapper(type, client, host, this.HttpClientSettings);
             return proxyClass.GetTransparentProxy();
         }

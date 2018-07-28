@@ -1,4 +1,5 @@
 ﻿using EasyHttpClient.Utilities;
+using Newtonsoft.Json;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -7,6 +8,7 @@ using System.Net.Http;
 using System.Reflection;
 using System.Runtime.Remoting.Messaging;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace EasyHttpClient
@@ -23,10 +25,13 @@ namespace EasyHttpClient
 
     public class ActionContext
     {
+        public CancellationTokenSource CancellationToken { get; private set; }
+
         internal ActionContext(IMethodCallMessage methodCallMessage)
         {
             this.MethodCallMessage = methodCallMessage;
             this.Properties = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+            this.CancellationToken = new CancellationTokenSource();
         }
 
         public IMethodCallMessage MethodCallMessage { get; private set; }
@@ -90,14 +95,61 @@ namespace EasyHttpClient
         public IHttpResult CreateHttpResult()
         {
             var httpResultType = MethodDescription.ReturnTypeDescription.HttpResultType;
-            return (IHttpResult)Activator.CreateInstance(httpResultType.MakeGenericType(this.MethodDescription.ReturnTypeDescription.TargetObjectType), this.HttpClientSettings.JsonSerializerSettings);
+            IHttpResult httpResult = null;
+            if (httpResultType == typeof(HttpResult<>))
+            {
+                httpResult = (IHttpResult)Activator.CreateInstance(typeof(HttpResult<>).MakeGenericType(this.MethodDescription.ReturnTypeDescription.TargetObjectType), this.HttpClientSettings.JsonSerializerSettings);
+            }
+            else
+            {
+                var constructors = httpResultType.GetConstructors();
+                if (constructors.Any(w => w.GetParameters()
+                                              .Count(p => p.ParameterType == typeof(JsonSerializerSettings)) == 1))
+                {
+                    httpResult =
+                        (IHttpResult)Activator.CreateInstance(httpResultType,
+                            this.HttpClientSettings.JsonSerializerSettings);
+                }
+                else
+                {
+                    httpResult = (IHttpResult)Activator.CreateInstance(httpResultType);
+                }
 
+            }
+            httpResult.RequestMessage = this.HttpRequestMessage;
+            return httpResult;
         }
 
         public IHttpResult<T> CreateHttpResult<T>()
         {
             var httpResultType = MethodDescription.ReturnTypeDescription.HttpResultType;
-            return (IHttpResult<T>)Activator.CreateInstance(httpResultType.MakeGenericType(typeof(T)), this.HttpClientSettings.JsonSerializerSettings);
+            var result = (IHttpResult<T>)Activator.CreateInstance(httpResultType.MakeGenericType(typeof(T)), this.HttpClientSettings.JsonSerializerSettings);
+            result.RequestMessage = this.HttpRequestMessage;
+
+            IHttpResult<T> httpResult = null;
+            if (httpResultType == typeof(HttpResult<>))
+            {
+                httpResult =new HttpResult<T>(this.HttpClientSettings.JsonSerializerSettings);
+            }
+            else
+            {
+                var constructors = httpResultType.GetConstructors();
+                if (constructors.Any(w => w.GetParameters()
+                                              .Count(p => p.ParameterType == typeof(JsonSerializerSettings)) == 1))
+                {
+                    httpResult =
+                        (IHttpResult<T>)Activator.CreateInstance(httpResultType,
+                            this.HttpClientSettings.JsonSerializerSettings);
+                }
+                else
+                {
+                    httpResult = (IHttpResult<T>)Activator.CreateInstance(httpResultType);
+                }
+            }
+            httpResult.RequestMessage = this.HttpRequestMessage;
+            return httpResult;
+
+
         }
     }
 }

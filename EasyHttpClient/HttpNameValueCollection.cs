@@ -14,6 +14,11 @@ namespace EasyHttpClient
             return this.Where(i => string.Equals(key, i.Key, StringComparison.OrdinalIgnoreCase)).Select(i => i.Value).ToArray();
         }
 
+        public bool ContainsKey(string key)
+        {
+           return this.Any(i => string.Equals(key, i.Key, StringComparison.OrdinalIgnoreCase));
+        }
+
         public string Get(string key)
         {
             var m = this.FirstOrDefault(i => string.Equals(key, i.Key, StringComparison.OrdinalIgnoreCase));

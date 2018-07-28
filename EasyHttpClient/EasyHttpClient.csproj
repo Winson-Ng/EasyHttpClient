@@ -57,6 +57,7 @@
     <Compile Include="ActionContext.cs" />
     <Compile Include="ActionFilters\ActionFilterAttribute.cs" />
     <Compile Include="ActionFilters\IActionFilter.cs" />
+    <Compile Include="ActionFilters\TimeoutAttribute.cs" />
     <Compile Include="App_Packages\TaskHelpers.Sources.0.3\TaskHelpers.cs" />
     <Compile Include="App_Packages\TaskHelpers.Sources.0.3\TaskHelpersExtensions.cs" />
     <Compile Include="Attributes\AllowAnonymousAttribute.cs" />
@@ -80,9 +81,11 @@
     <Compile Include="Attributes\Parameter\FileContentAttribute.cs" />
     <Compile Include="Attributes\Parameter\RawContentAttribute.cs" />
     <Compile Include="Attributes\Parameter\CookieAttribute.cs" />
+    <Compile Include="Attributes\HttpRetryAttribute.cs" />
     <Compile Include="Attributes\Route\RoutePrefixAttribute.cs" />
     <Compile Include="Attributes\Route\RouteAttribute.cs" />
     <Compile Include="Attributes\StringFormatAttribute.cs" />
+    <Compile Include="Utilities\EasyHttpRequest.cs" />
     <Compile Include="EmptyMethodCallMessage.cs" />
     <Compile Include="Exceptions\HttpResultException.cs" />
     <Compile Include="HttpClientSettings.cs" />

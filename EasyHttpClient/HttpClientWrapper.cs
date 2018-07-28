@@ -93,38 +93,51 @@ namespace EasyHttpClient
         {
             try
             {
-                actionContext.HttpResponseMessage = await httpClient.SendAsync(actionContext.HttpRequestMessage);
+                actionContext.HttpResponseMessage = await httpClient.SendAsync(actionContext.HttpRequestMessage, actionContext.CancellationToken.Token);
+                return actionContext.HttpResponseMessage;
+            }
+            catch (OperationCanceledException ex)
+            {
+                actionContext.HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.RequestTimeout)
+                {
+                    RequestMessage = actionContext.HttpRequestMessage,
+                    ReasonPhrase = "RequestCanceled",
+                    Content = new StringContent(ex.ToString())
+                };
                 return actionContext.HttpResponseMessage;
             }
             catch (HttpRequestException ex)
             {
-                return new HttpResponseMessage(HttpStatusCode.RequestTimeout)
+                actionContext.HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.RequestTimeout)
                 {
                     RequestMessage = actionContext.HttpRequestMessage,
-                    ReasonPhrase = "RequestTimeout",
+                    ReasonPhrase = "HttpRequestException",
                     Content = new StringContent(ex.ToString())
                 };
+                return actionContext.HttpResponseMessage;
             }
             catch (WebException we)
             {
                 switch (we.Status)
                 {
                     case WebExceptionStatus.Timeout:
-                        return new HttpResponseMessage(HttpStatusCode.RequestTimeout)
+                        actionContext.HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.RequestTimeout)
                         {
                             RequestMessage = actionContext.HttpRequestMessage,
                             ReasonPhrase = HttpStatusCode.RequestTimeout.ToString(),
                             Content = new StringContent(we.ToString())
                         };
+                        return actionContext.HttpResponseMessage;
                     case WebExceptionStatus.ConnectFailure:
                     case WebExceptionStatus.ConnectionClosed:
                     case WebExceptionStatus.PipelineFailure:
-                        return new HttpResponseMessage((HttpStatusCode)599)
+                        actionContext.HttpResponseMessage = new HttpResponseMessage((HttpStatusCode)599)
                         {
                             RequestMessage = actionContext.HttpRequestMessage,
                             ReasonPhrase = we.Status.ToString(),
                             Content = new StringContent(we.ToString())
                         };
+                        return actionContext.HttpResponseMessage;
                     //case WebExceptionStatus.NameResolutionFailure:
                     //case WebExceptionStatus.ProxyNameResolutionFailure:
                     //    return new HttpResponseMessage((HttpStatusCode)523)
@@ -134,12 +147,13 @@ namespace EasyHttpClient
                     //    };
                     case WebExceptionStatus.SecureChannelFailure:
                     case WebExceptionStatus.TrustFailure:
-                        return new HttpResponseMessage((HttpStatusCode)525)
+                        actionContext.HttpResponseMessage = new HttpResponseMessage((HttpStatusCode)525)
                         {
                             RequestMessage = actionContext.HttpRequestMessage,
                             ReasonPhrase = we.Status.ToString(),
                             Content = new StringContent(we.ToString())
                         };
+                        return actionContext.HttpResponseMessage;
                     default:
                         throw;
                 }
@@ -231,7 +245,7 @@ namespace EasyHttpClient
                                 httpRequestTask = doSendHttpRequestAsync(_httpClient, actionContext);
                             }
                             return httpRequestTask;
-                        }, (r) => Task.FromResult((int)r.StatusCode > 500 || r.StatusCode == HttpStatusCode.RequestTimeout), _httpClientSettings.MaxRetry)
+                        }, (r) => Task.FromResult((int)r.StatusCode > 500 || r.StatusCode == HttpStatusCode.RequestTimeout), actionContext.MethodDescription.MaxRetry)
                         , actionContext);
 
                 });
@@ -339,7 +353,7 @@ namespace EasyHttpClient
                                 }
                             ).ToList();
 
-
+                        var httpRetryAttr = methodInfo.GetCustomAttribute<HttpRetryAttribute>();
                         methodDescription = new MethodDescription(methodInfo)
                         {
                             HttpMethod = httpMethod,
@@ -347,6 +361,7 @@ namespace EasyHttpClient
                                                 methodInfo.IsDefined(typeof(AuthorizeAttribute)))
                                                 && !methodInfo.IsDefined(typeof(AllowAnonymousAttribute)),
                             Route = routeAttribute.Path,
+                            MaxRetry = httpRetryAttr != null ? httpRetryAttr.MaxRetry : _httpClientSettings.MaxRetry,
                             ActionFilters = _httpClientSettings.ActionFilters.Concat(methodInfo.GetCustomAttributes().Where(a => a is IActionFilter).Cast<IActionFilter>().OrderBy(i => i.Order)).ToArray(),
                             Parameters = attributedParameter.Union(nonAttributedParameter).ToArray(),
                             ReturnTypeDescription = new ReturnTypeDescription()

@@ -76,13 +76,6 @@ namespace EasyHttpClient.Utilities
         {
             var httpMessage = new HttpRequestMessage(HttpMethod, UriBuilder.Uri);
 
-
-            foreach (var h in this.Headers.GroupBy(h => h.Key))
-                httpMessage.Headers.TryAddWithoutValidation(h.Key, h.Select(i => i.Value));
-
-            foreach (var c in this.Cookies)
-                httpMessage.Headers.GetCookies().Add(c);
-
             if (this.PathParams.Any())
             {
                 var path = HttpUtility.UrlDecode(UriBuilder.Path);
@@ -158,10 +151,18 @@ namespace EasyHttpClient.Utilities
                     if (FormBodys.Any())
                     {
                         httpMessage.Content = new FormUrlEncodedContent(this.FormBodys);
+                        if (httpMessage.Content.Headers != null && httpMessage.Content.Headers.ContentType!=null)
+                        {
+                            httpMessage.Content.Headers.ContentType.CharSet = Utf8Encoding.HeaderName;
+                        }
                     }
                     else if (JsonBody != null)
                     {
                         httpMessage.Content = new StringContent(JsonBody.ToString(), Utf8Encoding, "application/json");
+                        if (httpMessage.Content.Headers != null && httpMessage.Content.Headers.ContentType != null)
+                        {
+                            httpMessage.Content.Headers.ContentType.CharSet = Utf8Encoding.HeaderName;
+                        }
                     }
                     if (RawContents.Any())
                     {
@@ -187,6 +188,16 @@ namespace EasyHttpClient.Utilities
 
             }
             httpMessage.RequestUri = this.UriBuilder.Uri;
+
+
+            foreach (var h in this.Headers.GroupBy(h => h.Key))
+            {
+                httpMessage.Headers.TryAddWithoutValidation(h.Key, h.Select(i => i.Value));
+            }
+
+            foreach (var c in this.Cookies)
+                httpMessage.Headers.GetCookies().Add(c);
+
 
             return httpMessage;
         }

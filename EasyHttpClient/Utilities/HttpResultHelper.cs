@@ -30,30 +30,8 @@ namespace EasyHttpClient.Utilities
 
         internal static async Task<IHttpResult> ToHttpResult(this HttpResponseMessage responseMessage, Type returnObjectType, ActionContext actionContext)
         {
-            var httpResultType = actionContext.MethodDescription.ReturnTypeDescription.HttpResultType;
             var httpClientSettings = actionContext.HttpClientSettings;
-            IHttpResult httpResult = null;
-            if (httpResultType == typeof(HttpResult<>))
-            {
-                httpResult = (IHttpResult)Activator.CreateInstance(typeof(HttpResult<>).MakeGenericType(returnObjectType), httpClientSettings.JsonSerializerSettings);
-            }
-            else
-            {
-                var constructors = httpResultType.GetConstructors();
-                if (constructors.Any(w => w.GetParameters()
-                                              .Count(p => p.ParameterType == typeof(JsonSerializerSettings)) == 1))
-                {
-                    httpResult =
-                        (IHttpResult) Activator.CreateInstance(httpResultType,
-                            httpClientSettings.JsonSerializerSettings);
-                }
-                else
-                {
-                    httpResult = (IHttpResult)Activator.CreateInstance(httpResultType);
-                }
-
-            }
-            httpResult.RequestMessage = responseMessage.RequestMessage;
+            var httpResult = actionContext.CreateHttpResult();
             httpResult.Headers = responseMessage.Headers;
             httpResult.IsSuccessStatusCode = responseMessage.IsSuccessStatusCode;
             httpResult.ReasonPhrase = responseMessage.ReasonPhrase;
@@ -130,7 +108,7 @@ namespace EasyHttpClient.Utilities
             var actionContext = new EmptyActionContext();
             actionContext.HttpClientSettings = httpClientSettings;
             actionContext.ReturnTypeDescription.ReturnType = typeof(IHttpResult);
-            actionContext.ReturnTypeDescription.TargetObjectType = typeof(object);
+            actionContext.ReturnTypeDescription.TargetObjectType = returnObjectType;
 
             return responseMessageTask.Then(responseMessage => ToHttpResult(responseMessage, returnObjectType, actionContext));
         }

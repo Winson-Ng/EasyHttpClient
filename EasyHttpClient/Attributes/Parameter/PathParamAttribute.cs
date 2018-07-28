@@ -34,6 +34,21 @@ namespace EasyHttpClient.Attributes
 
         internal string[] PathParamNamesFilter { get; set; }
 
+
+        internal void ProcessParameter(HttpRequestMessageBuilder requestBuilder, object parameterValue)
+        {
+            var pFormatAttr = requestBuilder.DefaultStringFormatter;
+            var processedParameters = Utility.ExtractUrlParameter(this.Name, parameterValue, pFormatAttr, 1);
+
+            foreach (var p in processedParameters.GroupBy(i => i.Key))
+            {
+                if (PathParamNamesFilter.Contains(p.Key, StringComparer.OrdinalIgnoreCase))
+                {
+                    requestBuilder.PathParams[p.Key] = string.Join(",", p.Select(i => i.Value));
+                }
+            };
+        }
+
         public void ProcessParameter(HttpRequestMessageBuilder requestBuilder, ParameterInfo parameterInfo, object parameterValue)
         {
 

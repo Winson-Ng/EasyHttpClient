@@ -52,6 +52,19 @@ namespace EasyHttpClient.Attributes
             MergeArrayHandling = MergeArrayHandling.Merge
         };
 
+        internal void ProcessParameter(HttpRequestMessageBuilder requestBuilder, object parameterValue)
+        {
+            switch (this.JTokenType)
+            {
+                case JTokenType.JArray:
+                    this.ProcessAsJArray(requestBuilder, null, parameterValue);
+                    break;
+                case JTokenType.JObject:
+                    this.ProcessAsJObject(requestBuilder, null, parameterValue);
+                    break;
+            }
+        }
+
         public void ProcessParameter(HttpRequestMessageBuilder requestBuilder, ParameterInfo parameterInfo, object parameterValue)
         {
             switch (this.JTokenType)
