@@ -1,5 +1,6 @@
 ﻿using EasyHttpClient.Utilities;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -48,42 +49,73 @@ namespace EasyHttpClient.Attributes
                     requestBuilder.MultiPartAttribute != null ? requestBuilder.MultiPartAttribute.MultiPartType : MultiPartType.FormData
                     );
 
-            if (parameterValue is string)
-            {
-                var f = new FileInfo(parameterValue.ToString());
-                var content = new StreamContent(f.OpenRead());
-                content.Headers.ContentDisposition = contentDisposition;
-                content.Headers.ContentDisposition.FileName = f.Name;
-                content.Headers.ContentDisposition.Name = dispositionName;
-                content.Headers.ContentType = new MediaTypeHeaderValue(!string.IsNullOrWhiteSpace(this.ContentType) ? this.ContentType : MimeMapping.GetMimeMapping(f.Name));
 
-                requestBuilder.RawContents.Add(content);
-            }
-            else if (parameterValue is FileInfo)
+            Action<object> process = (pv) =>
             {
-                var f = parameterValue as FileInfo;
-                var content = new StreamContent(f.OpenRead());
-                content.Headers.ContentDisposition = contentDisposition;
-                content.Headers.ContentDisposition.FileName = f.Name;
-                content.Headers.ContentDisposition.Name = dispositionName;
-                content.Headers.ContentType = new MediaTypeHeaderValue(!string.IsNullOrWhiteSpace(this.ContentType) ? this.ContentType : MimeMapping.GetMimeMapping(f.Name));
+                if (pv is string)
+                {
+                    var f = new FileInfo(pv.ToString());
+                    var content = new StreamContent(f.OpenRead());
+                    content.Headers.ContentDisposition = contentDisposition;
+                    content.Headers.ContentDisposition.FileName = f.Name;
+                    content.Headers.ContentDisposition.Name = dispositionName;
+                    content.Headers.ContentType = new MediaTypeHeaderValue(!string.IsNullOrWhiteSpace(this.ContentType) ? this.ContentType : MimeMapping.GetMimeMapping(f.Name));
 
-                requestBuilder.RawContents.Add(content);
-            }
-            else if (parameterValue is FileStream)
+                    requestBuilder.RawContents.Add(content);
+                }
+                else if (pv is FileInfo)
+                {
+                    var f = pv as FileInfo;
+                    var content = new StreamContent(f.OpenRead());
+                    content.Headers.ContentDisposition = contentDisposition;
+                    content.Headers.ContentDisposition.FileName = f.Name;
+                    content.Headers.ContentDisposition.Name = dispositionName;
+                    content.Headers.ContentType = new MediaTypeHeaderValue(!string.IsNullOrWhiteSpace(this.ContentType) ? this.ContentType : MimeMapping.GetMimeMapping(f.Name));
+
+                    requestBuilder.RawContents.Add(content);
+                }
+                else if (pv is FileStream)
+                {
+                    var s = pv as FileStream;
+                    var content = new StreamContent(s);
+                    content.Headers.ContentDisposition = contentDisposition;
+                    content.Headers.ContentDisposition.FileName = s.Name;
+                    content.Headers.ContentDisposition.Name = dispositionName;
+                    content.Headers.ContentType = new MediaTypeHeaderValue(!string.IsNullOrWhiteSpace(this.ContentType) ? this.ContentType : MimeMapping.GetMimeMapping(s.Name));
+                    requestBuilder.RawContents.Add(content);
+                }
+                else
+                {
+                    throw new NotSupportedException("parameterValue must be String/FileInfo/FileStream");
+                }
+            };
+
+            if (parameterValue != null)
             {
-                var s = parameterValue as FileStream;
-                var content = new StreamContent(s);
-                content.Headers.ContentDisposition = contentDisposition;
-                content.Headers.ContentDisposition.FileName = s.Name;
-                content.Headers.ContentDisposition.Name = dispositionName;
-                content.Headers.ContentType = new MediaTypeHeaderValue(!string.IsNullOrWhiteSpace(this.ContentType) ? this.ContentType : MimeMapping.GetMimeMapping(s.Name));
-                requestBuilder.RawContents.Add(content);
+                if (typeof(IEnumerable).IsAssignableFrom(parameterValue.GetType()))
+                {
+                    foreach (var pv in parameterValue as IEnumerable)
+                    {
+                        process(pv);
+                    }
+                }
+                else if (parameterValue.GetType().IsArray)
+                {
+                    foreach (var pv in parameterValue as Array)
+                    {
+                        process(pv);
+                    }
+                }
+                else
+                {
+                    process(parameterValue);
+                }
             }
             else
             {
-                throw new NotSupportedException("parameterValue must be String/FileInfo/FileStream");
+                throw new NotSupportedException("parameterValue not allow null");
             }
+
         }
     }
 }

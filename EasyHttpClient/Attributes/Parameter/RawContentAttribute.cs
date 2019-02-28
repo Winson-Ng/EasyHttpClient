@@ -1,5 +1,6 @@
 ﻿using EasyHttpClient.Utilities;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -50,45 +51,73 @@ namespace EasyHttpClient.Attributes
 
         public void ProcessParameter(HttpRequestMessageBuilder requestBuilder, ParameterInfo parameterInfo, object parameterValue)
         {
-            HttpContent content = null;
-            if (parameterValue is HttpContent)
+            Action<object> process = (pv) =>
             {
-                content = parameterValue as HttpContent;
-            }
-            else
-            {
-
-                var dispositionName = "\"" + (!string.IsNullOrWhiteSpace(this.Name) ? this.Name : parameterInfo.Name) + "\"";
-                var contentDisposition = new ContentDispositionHeaderValue(
-                        requestBuilder.MultiPartAttribute != null ? requestBuilder.MultiPartAttribute.MultiPartType : MultiPartType.FormData
-                        );
-
-                if (parameterValue is Stream)
+                HttpContent content = null;
+                if (pv is HttpContent)
                 {
-                    var s = parameterValue as Stream;
-                    content = new StreamContent(s);
-                }
-                else if (parameterValue is IEnumerable<byte>)
-                {
-                    var s = new MemoryStream((parameterValue as IEnumerable<byte>).ToArray());
-                    content = new StreamContent(s);
+                    content = pv as HttpContent;
                 }
                 else
                 {
-                    var val = Convert.ToString(parameterValue);
-                    content = new StringContent(val);
+
+                    var dispositionName = "\"" + (!string.IsNullOrWhiteSpace(this.Name) ? this.Name : parameterInfo.Name) + "\"";
+                    var contentDisposition = new ContentDispositionHeaderValue(
+                            requestBuilder.MultiPartAttribute != null ? requestBuilder.MultiPartAttribute.MultiPartType : MultiPartType.FormData
+                            );
+
+                    if (pv is Stream)
+                    {
+                        var s = pv as Stream;
+                        content = new StreamContent(s);
+                    }
+                    else if (pv is IEnumerable<byte>)
+                    {
+                        var s = new MemoryStream((pv as IEnumerable<byte>).ToArray());
+                        content = new StreamContent(s);
+                    }
+                    else
+                    {
+                        var val = Convert.ToString(pv);
+                        content = new StringContent(val);
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(this.ContentType))
+                        content.Headers.ContentType = new MediaTypeHeaderValue(this.ContentType);
+
+                    content.Headers.ContentDisposition = contentDisposition;
+                    content.Headers.ContentDisposition.Name = dispositionName;
+
                 }
 
-                if (!string.IsNullOrWhiteSpace(this.ContentType))
-                    content.Headers.ContentType = new MediaTypeHeaderValue(this.ContentType);
+                requestBuilder.RawContents.Add(content);
+            };
 
-                content.Headers.ContentDisposition = contentDisposition;
-                content.Headers.ContentDisposition.Name = dispositionName;
-
+            if (parameterValue != null)
+            {
+                if (typeof(IEnumerable).IsAssignableFrom(parameterValue.GetType()))
+                {
+                    foreach (var pv in parameterValue as IEnumerable)
+                    {
+                        process(pv);
+                    }
+                }
+                else if (parameterValue.GetType().IsArray)
+                {
+                    foreach (var pv in parameterValue as Array)
+                    {
+                        process(pv);
+                    }
+                }
+                else
+                {
+                    process(parameterValue);
+                }
             }
-
-            requestBuilder.RawContents.Add(content);
-
+            else
+            {
+                throw new NotSupportedException("parameterValue not allow null");
+            }
         }
     }
 }

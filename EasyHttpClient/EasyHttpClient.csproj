@@ -67,6 +67,7 @@
     <Compile Include="Attributes\HttpMethod\HttpOptionsAttribute.cs" />
     <Compile Include="Attributes\HttpMethod\HttpHeadAttribute.cs" />
     <Compile Include="Attributes\HttpMethod\HttpDeleteAttribute.cs" />
+    <Compile Include="Attributes\HttpMethod\HttpPatchAttribute.cs" />
     <Compile Include="Attributes\HttpMethod\HttpPutAttribute.cs" />
     <Compile Include="Attributes\HttpMethod\HttpPostAttribute.cs" />
     <Compile Include="Attributes\HttpMethod\HttpGetAttribute.cs" />

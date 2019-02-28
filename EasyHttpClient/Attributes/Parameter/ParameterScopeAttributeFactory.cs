@@ -40,6 +40,10 @@ namespace EasyHttpClient.Attributes
             {
                 return new JsonBodyAttribute() { Name = parameterInfo.Name };
             }
+            else if (httpMethod.Method == "PATCH")
+            {
+                return new JsonBodyAttribute() { Name = parameterInfo.Name };
+            }
             else
             {
                 return new QueryStringAttribute() { Name = parameterInfo.Name };

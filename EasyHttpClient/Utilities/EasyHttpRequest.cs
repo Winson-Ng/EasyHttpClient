@@ -82,7 +82,7 @@ namespace EasyHttpClient.Utilities
         {
             this.HttpClientSettings = new HttpClientSettings();
             this.HttpClientProvider = new DefaultHttpClientProvider();
-            this._httpRequestMessageBuilder = new HttpRequestMessageBuilder(httpMethod, new UriBuilder(url), this.HttpClientSettings);
+            this._httpRequestMessageBuilder = new HttpRequestMessageBuilder(httpMethod, new UriBuilder(url), this.HttpClientSettings, true);
         }
 
         public EasyHttpRequest<T> SetOAuth(IOAuth2ClientHandler oauthHandler)
@@ -106,6 +106,9 @@ namespace EasyHttpClient.Utilities
                 pa.ProcessParameter(_httpRequestMessageBuilder, value);
             }
             return this;
+        }
+        public EasyHttpRequest<T> AddPathParam(object parameter) {
+            return AddJsonBodyParams(parameter);
         }
 
         public EasyHttpRequest<T> AddPathParams(params object[] parameters)
@@ -133,6 +136,9 @@ namespace EasyHttpClient.Utilities
             }
             return this;
         }
+        public EasyHttpRequest<T> AddQueryString(object parameter) {
+            return AddQueryStrings(parameter);
+        }
 
         public EasyHttpRequest<T> AddQueryStrings(params object[] parameters)
         {
@@ -158,13 +164,17 @@ namespace EasyHttpClient.Utilities
             return this;
         }
 
+        public EasyHttpRequest<T> AddFormBodyParam(object parameter) {
+            return AddFormBodyParams(parameter);
+        }
+
         public EasyHttpRequest<T> AddFormBodyParams(params object[] parameters)
         {
             if (parameters != null)
             {
                 foreach (var p in parameters)
                 {
-                    var pa = new QueryStringAttribute();
+                    var pa = new FormBodyAttribute();
                     pa.ProcessParameter(_httpRequestMessageBuilder, p);
                 }
             }
@@ -186,6 +196,11 @@ namespace EasyHttpClient.Utilities
             return this;
         }
 
+        public EasyHttpRequest<T> AddJsonBodyParam(object parameter)
+        {
+            return AddJsonBodyParams(parameter);
+        }
+
         public EasyHttpRequest<T> AddJsonBodyParams(params object[] parameters)
         {
             if (parameters != null)
@@ -201,8 +216,12 @@ namespace EasyHttpClient.Utilities
             }
             return this;
         }
+        public EasyHttpRequest<T> AddJsonBodyParam(JTokenType jtokenType, object parameter) {
 
-        public EasyHttpRequest<T> AddJsonBodyParams(JTokenType jtokenType = JTokenType.JObject, params object[] parameters)
+            return AddJsonBodyParams(jtokenType, new[] { parameter });
+        }
+
+        public EasyHttpRequest<T> AddJsonBodyParams(JTokenType jtokenType, params object[] parameters)
         {
             if (parameters != null)
             {
@@ -230,6 +249,10 @@ namespace EasyHttpClient.Utilities
             return this;
         }
 
+        public EasyHttpRequest<T> AddHeader(object parameter) {
+            return AddHeader(parameter);
+        }
+
         public EasyHttpRequest<T> AddHeaders(params object[] parameters)
         {
             if (parameters != null)
@@ -255,13 +278,16 @@ namespace EasyHttpClient.Utilities
             return this;
         }
 
+        public EasyHttpRequest<T> AddCookie(object parameter) {
+            return AddCookies(parameter);
+        }
         public EasyHttpRequest<T> AddCookies(params object[] parameters)
         {
             if (parameters != null)
             {
                 foreach (var p in parameters)
                 {
-                    var pa = new HeaderAttribute();
+                    var pa = new CookieAttribute();
                     pa.ProcessParameter(_httpRequestMessageBuilder, p);
                 }
             }
@@ -275,6 +301,16 @@ namespace EasyHttpClient.Utilities
                 var pa = new FileContentAttribute();
                 pa.Name = name;
                 pa.ProcessParameter(_httpRequestMessageBuilder, null, value);
+            }
+            return this;
+        }
+
+        public EasyHttpRequest<T> AddFile(object parameter)
+        {
+            if (parameter != null)
+            {
+                var pa = new FileContentAttribute();
+                pa.ProcessParameter(_httpRequestMessageBuilder, null, parameter);
             }
             return this;
         }
@@ -302,6 +338,15 @@ namespace EasyHttpClient.Utilities
                 var pa = new RawContentAttribute();
                 pa.Name = name;
                 pa.ProcessParameter(_httpRequestMessageBuilder, null, value);
+            }
+            return this;
+        }
+        public EasyHttpRequest<T> AddRawContent(object parameter) {
+
+            if (parameter != null)
+            {
+                var pa = new RawContentAttribute();
+                pa.ProcessParameter(_httpRequestMessageBuilder, null, parameter);
             }
             return this;
         }
@@ -427,7 +472,7 @@ namespace EasyHttpClient.Utilities
                     MaxRetry = this.HttpClientSettings.MaxRetry,
                 }
             };
-            var _httpClient = this.HttpClientProvider.GetClient(this.HttpClientSettings);
+            var _httpClient = this.HttpClientProvider.GetClient(this.HttpClientSettings, this.HttpClientSettings.DelegatingHandlers.Select(i => i()).ToArray());
             var httpResultTaskFunc = HttpRequestTaskFunc(actionContext, 0, () =>
             {
 
@@ -470,7 +515,7 @@ namespace EasyHttpClient.Utilities
 
         public IHttpResult<T> Send()
         {
-            throw new NotImplementedException();
+           return SendAsync().Result;
         }
     }
 }

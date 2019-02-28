@@ -56,6 +56,18 @@ namespace EasyHttpClient.Utilities
 
         //public List<KeyValuePair<string, FileInfo>> Files { get; set; }
 
+        public HttpRequestMessageBuilder(HttpMethod httpMethod, UriBuilder uriBuilder, HttpClientSettings httpSettings, bool keepOrginalQueryString)
+            :this(httpMethod, uriBuilder, httpSettings)
+        {
+            if (!string.IsNullOrWhiteSpace(uriBuilder.Query))
+            {
+                var parsedQueryString = HttpUtility.ParseQueryString(uriBuilder.Query, Utf8Encoding);
+                foreach (var k in parsedQueryString.Keys)
+                {
+                    this.QueryStrings.Add(k.ToString(), parsedQueryString.GetValues(k.ToString()));
+                }
+            }
+        }
         public HttpRequestMessageBuilder(HttpMethod httpMethod, UriBuilder uriBuilder, HttpClientSettings httpSettings)
         {
             this.HttpMethod = httpMethod;
@@ -89,7 +101,7 @@ namespace EasyHttpClient.Utilities
             if (this.QueryStrings.Any())
                 UriBuilder.Query = string.Join("&", this.QueryStrings.Select(q => q.Key + "=" + HttpUtility.UrlEncode(q.Value)));
 
-            if (this.HttpMethod == HttpMethod.Post
+            if (this.HttpMethod == HttpMethod.Post || this.HttpMethod.Method == "PATCH"
                 || this.HttpMethod == HttpMethod.Put)
             {
                 if (this.MultiPartAttribute != null)
