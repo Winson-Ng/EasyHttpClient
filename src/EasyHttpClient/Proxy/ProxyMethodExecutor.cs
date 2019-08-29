@@ -12,9 +12,9 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace EasyHttpClient
+namespace EasyHttpClient.Proxy
 {
-    public class HttpClientWrapper : DispatchProxy
+    public class ProxyMethodExecutor
     {
         const string MsgException = @"{0}: {1}";
         const string MsgMissingSomething = @"{0}: Missing {1}";
@@ -27,24 +27,12 @@ namespace EasyHttpClient
         private static readonly Encoding Utf8Encoding = new UTF8Encoding(false);
         private static readonly Regex RouteParameterParaser = new Regex(@"\{(?<paraName>[a-zA-Z_][a-zA-Z0-9_]*)\}", RegexOptions.Compiled | RegexOptions.CultureInvariant);
         private RoutePrefixAttribute _routePrefixAttribute;
-        private HttpClient _httpClient;
-        private HttpClientSettings _httpClientSettings;
-        private Uri _host;
-        private bool _authorizeRequired;
 
-        public static T Create<T>(HttpClientWrapperFactory httpClientWrapperFactory)
-        {
-            object instance = Create<T, HttpClientWrapper>();
-            ((HttpClientWrapper)instance).SetParameters(httpClientWrapperFactory);
-            return (T)instance;
-        }
+        private readonly EasyClientConfig _config;
 
-        private void SetParameters(HttpClientWrapperFactory httpClientWrapperFactory)
+        public ProxyMethodExecutor(EasyClientConfig config)
         {
-            _httpClientSettings = httpClientWrapperFactory.HttpClientSettings;
-            _httpClient = httpClientWrapperFactory.HttpClientProvider.GetClient(this._httpClientSettings, this._httpClientSettings.DelegatingHandlers.Select(i => i()).ToArray());
-            _host = httpClientWrapperFactory.Host;
-            _authorizeRequired = httpClientWrapperFactory.AuthorizeRequired;
+            _config = config;
         }
 
         private async Task<HttpResponseMessage> DoSendHttpRequestAsync(HttpClient httpClient, ActionContext actionContext)
@@ -96,13 +84,6 @@ namespace EasyHttpClient
                             Content = new StringContent(we.ToString())
                         };
                         return actionContext.HttpResponseMessage;
-                    //case WebExceptionStatus.NameResolutionFailure:
-                    //case WebExceptionStatus.ProxyNameResolutionFailure:
-                    //    return new HttpResponseMessage((HttpStatusCode)523)
-                    //    {
-                    //        ReasonPhrase = we.Status.ToString(),
-                    //        Content = new StringContent(we.ToString())
-                    //    };
                     case WebExceptionStatus.SecureChannelFailure:
                     case WebExceptionStatus.TrustFailure:
                         actionContext.HttpResponseMessage = new HttpResponseMessage((HttpStatusCode)525)
@@ -118,18 +99,18 @@ namespace EasyHttpClient
             }
         }
 
-        protected override object Invoke(MethodInfo targetMethod, object[] args)
+        public object Excute(MethodInfo targetMethod, object[] args)
         {
             var actionContext = new ActionContext();
-            actionContext.HttpClientSettings = _httpClientSettings;
+            actionContext.HttpClientSettings = _config.HttpClientSettings;
             actionContext.MethodDescription = this.GetMethodDescription(targetMethod);
 
             _routePrefixAttribute = targetMethod.DeclaringType.GetCustomAttribute<RoutePrefixAttribute>();
-            var uriBuilder = new UriBuilder(Utility.CombinePaths(this._host
+            var uriBuilder = new UriBuilder(Utility.CombinePaths(_config.Host
                 , _routePrefixAttribute != null ? (_routePrefixAttribute.Prefix + "/") : ""
                 , actionContext.MethodDescription.Route));
 
-            actionContext.HttpRequestMessageBuilder = new HttpRequestMessageBuilder(actionContext.MethodDescription.HttpMethod, uriBuilder, _httpClientSettings);
+            actionContext.HttpRequestMessageBuilder = new HttpRequestMessageBuilder(actionContext.MethodDescription.HttpMethod, uriBuilder, _config.HttpClientSettings);
             actionContext.HttpRequestMessageBuilder.MultiPartAttribute = actionContext.MethodDescription.MultiPartAttribute;
 
             if (args.Count() > 0)
@@ -148,25 +129,24 @@ namespace EasyHttpClient
 
             var httpResultTaskFunc = HttpRequestTaskFunc(actionContext, 0, () =>
             {
-
                 return actionContext.MethodDescription.HttpResultConverter(
                     EasyHttpClient.Utilities.TaskExtensions.Retry<HttpResponseMessage>(() =>
                     {
                         actionContext.HttpRequestMessage = actionContext.HttpRequestMessageBuilder.Build();
 
                         Task<HttpResponseMessage> httpRequestTask;
-                        if (actionContext.MethodDescription.AuthorizeRequired && _httpClientSettings.OAuth2ClientHandler != null)
+                        if (actionContext.MethodDescription.AuthorizeRequired && _config.HttpClientSettings.OAuth2ClientHandler != null)
                         {
-                            httpRequestTask = _httpClientSettings.OAuth2ClientHandler.SetAccessToken(actionContext.HttpRequestMessage)
-                                .Then(() => DoSendHttpRequestAsync(_httpClient, actionContext))
+                            httpRequestTask = _config.HttpClientSettings.OAuth2ClientHandler.SetAccessToken(actionContext.HttpRequestMessage)
+                                .Then(() => DoSendHttpRequestAsync(_config.HttpClient, actionContext))
                                 .Then(async response =>
                                 {
                                     if (response.StatusCode == HttpStatusCode.Unauthorized)
                                     {
                                         actionContext.HttpRequestMessage = actionContext.HttpRequestMessageBuilder.Build();
-                                        if (await _httpClientSettings.OAuth2ClientHandler.RefreshAccessToken(actionContext.HttpRequestMessage))
+                                        if (await _config.HttpClientSettings.OAuth2ClientHandler.RefreshAccessToken(actionContext.HttpRequestMessage))
                                         {
-                                            response = await DoSendHttpRequestAsync(_httpClient, actionContext);
+                                            response = await DoSendHttpRequestAsync(_config.HttpClient, actionContext);
                                         }
                                     }
                                     return response;
@@ -174,7 +154,7 @@ namespace EasyHttpClient
                         }
                         else
                         {
-                            httpRequestTask = DoSendHttpRequestAsync(_httpClient, actionContext);
+                            httpRequestTask = DoSendHttpRequestAsync(_config.HttpClient, actionContext);
                         }
                         return httpRequestTask;
                     }, (r) => Task.FromResult((int)r.StatusCode > 500 || r.StatusCode == HttpStatusCode.RequestTimeout), actionContext.MethodDescription.MaxRetry)
@@ -282,12 +262,12 @@ namespace EasyHttpClient
                         methodDescription = new MethodDescription(methodInfo)
                         {
                             HttpMethod = httpMethod,
-                            AuthorizeRequired = (_authorizeRequired ||
+                            AuthorizeRequired = (_config.AuthorizeRequired ||
                                                 methodInfo.IsDefined(typeof(AuthorizeAttribute)))
                                                 && !methodInfo.IsDefined(typeof(AllowAnonymousAttribute)),
                             Route = routeAttribute.Path,
-                            MaxRetry = httpRetryAttr != null ? httpRetryAttr.MaxRetry : _httpClientSettings.MaxRetry,
-                            ActionFilters = _httpClientSettings.ActionFilters.Concat(methodInfo.GetCustomAttributes().Where(a => a is IActionFilter).Cast<IActionFilter>().OrderBy(i => i.Order)).ToArray(),
+                            MaxRetry = httpRetryAttr != null ? httpRetryAttr.MaxRetry : _config.HttpClientSettings.MaxRetry,
+                            ActionFilters = _config.HttpClientSettings.ActionFilters.Concat(methodInfo.GetCustomAttributes().Where(a => a is IActionFilter).Cast<IActionFilter>().OrderBy(i => i.Order)).ToArray(),
                             Parameters = attributedParameter.Union(nonAttributedParameter).ToArray(),
                             ReturnTypeDescription = new ReturnTypeDescription()
                         };
@@ -295,7 +275,7 @@ namespace EasyHttpClient
                         var returnType = methodInfo.ReturnType;
                         methodDescription.ReturnTypeDescription.ReturnType = methodInfo.ReturnType;
                         methodDescription.ReturnTypeDescription.TargetObjectType = methodInfo.ReturnType;
-                        methodDescription.ReturnTypeDescription.HttpResultDecoder = methodInfo.GetCustomAttributes().FirstOrDefault(c => c is IHttpResultDecoder) as IHttpResultDecoder ?? _httpClientSettings.HttpResultDecoder;
+                        methodDescription.ReturnTypeDescription.HttpResultDecoder = methodInfo.GetCustomAttributes().FirstOrDefault(c => c is IHttpResultDecoder) as IHttpResultDecoder ?? _config.HttpClientSettings.HttpResultDecoder;
 
                         if (typeof(Task).IsAssignableFrom(returnType) && returnType.IsGenericType)
                         {
@@ -445,5 +425,6 @@ namespace EasyHttpClient
             }
             return result.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         }
+
     }
 }

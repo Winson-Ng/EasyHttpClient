@@ -9,11 +9,10 @@ namespace XUnitTest
         [Fact]
         public async void SendTest()
         {
-            var factory = new HttpClientWrapperFactory();
-            factory.Host = new Uri("https://m.baidu.com/");
-            var baiduApiClient = factory.CreateFor<IBaiduApiClient>();
-            var result = await baiduApiClient.SearchSugguestion("Are You OK");
-            Assert.Equal(200, (int)result.StatusCode);
+            var factory = new EasyHttpClientFactory();
+            var baiduApiClient = factory.Create<IBaiduApiClient>("https://m.baidu.com/");
+            var response = await baiduApiClient.SearchSugguestion("Are You OK");
+            Assert.Equal(200, (int)response.StatusCode);
         }
     }
 }
