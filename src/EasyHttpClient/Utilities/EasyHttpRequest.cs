@@ -450,8 +450,7 @@ namespace EasyHttpClient.Utilities
 
         public async Task<IHttpResult<T>> SendAsync()
         {
-            var methodCall = new EmptyMethodCallMessage();
-            var actionContext = new ActionContext(methodCall)
+            var actionContext = new ActionContext()
             {
                 HttpClientSettings = this.HttpClientSettings,
                 MethodDescription = new MethodDescription()

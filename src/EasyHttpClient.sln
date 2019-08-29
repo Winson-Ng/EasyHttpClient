@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.572
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EasyHttpClient", "EasyHttpClient\EasyHttpClient.csproj", "{72F42C9D-3FAC-4225-9F1A-DDC1E110FFDD}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "XUnitTest", "XUnitTest\XUnitTest.csproj", "{7ED58DD5-9213-4CE6-AD28-2955573F3DC3}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{72F42C9D-3FAC-4225-9F1A-DDC1E110FFDD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{72F42C9D-3FAC-4225-9F1A-DDC1E110FFDD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{72F42C9D-3FAC-4225-9F1A-DDC1E110FFDD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{72F42C9D-3FAC-4225-9F1A-DDC1E110FFDD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7ED58DD5-9213-4CE6-AD28-2955573F3DC3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7ED58DD5-9213-4CE6-AD28-2955573F3DC3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7ED58DD5-9213-4CE6-AD28-2955573F3DC3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7ED58DD5-9213-4CE6-AD28-2955573F3DC3}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {673D3423-E2B8-4032-9248-3CB0DD0705D8}
+	EndGlobalSection
+EndGlobal

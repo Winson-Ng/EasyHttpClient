@@ -1,95 +1,53 @@
 ﻿using EasyHttpClient.ActionFilters;
 using EasyHttpClient.Attributes;
+using EasyHttpClient.Attributes.Parameter;
 using EasyHttpClient.Utilities;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Net.Http.Formatting;
-using System.Net.Http.Headers;
 using System.Reflection;
-using System.Runtime.Remoting.Messaging;
-using System.Runtime.Remoting.Proxies;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Web;
-using System.Web.Http;
-using EasyHttpClient.Attributes.Parameter;
 
 namespace EasyHttpClient
 {
-    public class HttpClientWrapper<T> : HttpClientWrapper
+    public class HttpClientWrapper : DispatchProxy
     {
-        public HttpClientWrapper(
-            HttpClient httpClient,
-            Uri host,
-            HttpClientSettings httpClientSettings)
-            : base(typeof(T), httpClient, host, httpClientSettings)
-        {
-        }
-
-        public new T GetTransparentProxy()
-        {
-            return (T)base.GetTransparentProxy();
-        }
-    }
-
-
-    public class HttpClientWrapper : RealProxy
-    {
-        private readonly MethodInfo CastHttpResultTaskMethod = typeof(EasyHttpClient.Utilities.TaskExtensions).GetMethod("CastHttpResultTask");
-
-        private readonly MethodInfo CastObjectTaskMethod = typeof(EasyHttpClient.Utilities.TaskExtensions).GetMethod("CastObjectTask");
-
-        private static readonly MethodInfo[] _reservedMethods = typeof(object).GetMethods();
-        /************
-
-         * *************/
-        private static readonly Encoding Utf8Encoding = new UTF8Encoding(false);
-        private static readonly Regex RouteParameterParaser = new Regex(@"\{(?<paraName>[a-zA-Z_][a-zA-Z0-9_]*)\}", RegexOptions.Compiled | RegexOptions.CultureInvariant);
-        private RoutePrefixAttribute _routePrefixAttribute;
-        //private JsonMediaTypeFormatter _jsonMediaTypeFormatter;
-        private HttpClient _httpClient;
-        private HttpClientSettings _httpClientSettings;
-        private Uri _host;
-        private bool _authorizeRequired;
-        private Type _objectType;
-        //private IHttpClientProvider _httpClientProvider { get; set; }
-
-
-        public HttpClientWrapper(
-            Type objectType,
-            HttpClient httpClient,
-            //IHttpClientProvider httpClientProvider, 
-            Uri host,
-            HttpClientSettings httpClientSettings)
-            : base(objectType)
-        {
-            _httpClient = httpClient;
-            _objectType = objectType;
-            //_httpClientProvider = httpClientProvider;
-            _host = host;
-            _httpClientSettings = httpClientSettings;
-            //_jsonMediaTypeFormatter = new JsonMediaTypeFormatter()
-            //{
-            //    SerializerSettings = _httpClientSettings.JsonSerializerSettings
-            //};
-            _routePrefixAttribute = objectType.GetCustomAttribute<RoutePrefixAttribute>();
-            _authorizeRequired = objectType.IsDefined(typeof(AuthorizeAttribute));
-        }
-
         const string MsgException = @"{0}: {1}";
         const string MsgMissingSomething = @"{0}: Missing {1}";
         const string MsgMissingSomethingOn = @"{0}: Missing {1} on {2}";
 
-        private async Task<HttpResponseMessage> doSendHttpRequestAsync(HttpClient httpClient, ActionContext actionContext)
+        private readonly MethodInfo CastHttpResultTaskMethod = typeof(EasyHttpClient.Utilities.TaskExtensions).GetMethod("CastHttpResultTask");
+        private readonly MethodInfo CastObjectTaskMethod = typeof(EasyHttpClient.Utilities.TaskExtensions).GetMethod("CastObjectTask");
+        private static readonly MethodInfo[] _reservedMethods = typeof(object).GetMethods();
+
+        private static readonly Encoding Utf8Encoding = new UTF8Encoding(false);
+        private static readonly Regex RouteParameterParaser = new Regex(@"\{(?<paraName>[a-zA-Z_][a-zA-Z0-9_]*)\}", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+        private RoutePrefixAttribute _routePrefixAttribute;
+        private HttpClient _httpClient;
+        private HttpClientSettings _httpClientSettings;
+        private Uri _host;
+        private bool _authorizeRequired;
+
+        public static T Create<T>(HttpClientWrapperFactory httpClientWrapperFactory)
+        {
+            object instance = Create<T, HttpClientWrapper>();
+            ((HttpClientWrapper)instance).SetParameters(httpClientWrapperFactory);
+            return (T)instance;
+        }
+
+        private void SetParameters(HttpClientWrapperFactory httpClientWrapperFactory)
+        {
+            _httpClientSettings = httpClientWrapperFactory.HttpClientSettings;
+            _httpClient = httpClientWrapperFactory.HttpClientProvider.GetClient(this._httpClientSettings, this._httpClientSettings.DelegatingHandlers.Select(i => i()).ToArray());
+            _host = httpClientWrapperFactory.Host;
+            _authorizeRequired = httpClientWrapperFactory.AuthorizeRequired;
+        }
+
+        private async Task<HttpResponseMessage> DoSendHttpRequestAsync(HttpClient httpClient, ActionContext actionContext)
         {
             try
             {
@@ -160,102 +118,71 @@ namespace EasyHttpClient
             }
         }
 
-        public override IMessage Invoke(IMessage msg)
+        protected override object Invoke(MethodInfo targetMethod, object[] args)
         {
-            var methodCall = msg as IMethodCallMessage;
-            try
+            var actionContext = new ActionContext();
+            actionContext.HttpClientSettings = _httpClientSettings;
+            actionContext.MethodDescription = this.GetMethodDescription(targetMethod);
+
+            _routePrefixAttribute = targetMethod.DeclaringType.GetCustomAttribute<RoutePrefixAttribute>();
+            var uriBuilder = new UriBuilder(Utility.CombinePaths(this._host
+                , _routePrefixAttribute != null ? (_routePrefixAttribute.Prefix + "/") : ""
+                , actionContext.MethodDescription.Route));
+
+            actionContext.HttpRequestMessageBuilder = new HttpRequestMessageBuilder(actionContext.MethodDescription.HttpMethod, uriBuilder, _httpClientSettings);
+            actionContext.HttpRequestMessageBuilder.MultiPartAttribute = actionContext.MethodDescription.MultiPartAttribute;
+
+            if (args.Count() > 0)
             {
-                if (_reservedMethods.Contains(methodCall.MethodBase))
+                var pEnumerator = actionContext.MethodDescription.Parameters.ToList().GetEnumerator();
+                foreach (var arg in args)
                 {
-                    var unRegisteredReturn = methodCall.MethodName.Equals("GetType") ? _objectType : methodCall.MethodBase.Invoke(this, methodCall.Args);
-                    var outArgs = methodCall.Args.Where(a => !methodCall.InArgs.Any(i => i == a)).ToArray();
-                    return new ReturnMessage(unRegisteredReturn, outArgs, outArgs.Length, methodCall.LogicalCallContext, methodCall);
-                }
-
-                var actionContext = new ActionContext(methodCall);
-                actionContext.HttpClientSettings = _httpClientSettings;
-                //var _httpClient = this._httpClientProvider.GetClient();
-                if (methodCall == null)
-                {
-                    throw new NotSupportedException(string.Format(MsgException, _objectType.ToString(), "Allow method call only!"));
-                }
-                var methodInfo = methodCall.MethodBase as MethodInfo;
-
-
-                actionContext.MethodDescription = this.GetMethodDescription(methodInfo);
-
-                var uriBuilder = new UriBuilder(Utility.CombinePaths(this._host
-                    , _routePrefixAttribute != null ? (_routePrefixAttribute.Prefix + "/") : ""
-                    , actionContext.MethodDescription.Route));
-
-                actionContext.HttpRequestMessageBuilder = new HttpRequestMessageBuilder(actionContext.MethodDescription.HttpMethod, uriBuilder, _httpClientSettings);
-                actionContext.HttpRequestMessageBuilder.MultiPartAttribute = actionContext.MethodDescription.MultiPartAttribute;
-
-                actionContext.ParameterValues = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-
-                if (methodCall.InArgCount > 0)
-                {
-
-                    for (var i = 0; i < methodCall.InArgCount; i++)
+                    pEnumerator.MoveNext();
+                    var p = pEnumerator.Current;
+                    foreach (var a in p.ScopeAttributes)
                     {
-                        actionContext.ParameterValues[methodCall.GetInArgName(i)] = methodCall.GetInArg(i);
-                    }
-
-                    foreach (var p in actionContext.MethodDescription.Parameters)
-                    {
-                        object val;
-                        if (actionContext.ParameterValues.TryGetValue(p.ParameterInfo.Name, out val))
-                        {
-                            foreach (var a in p.ScopeAttributes)
-                            {
-                                a.ProcessParameter(actionContext.HttpRequestMessageBuilder, p.ParameterInfo, val);
-                            }
-                        }
+                        a.ProcessParameter(actionContext.HttpRequestMessageBuilder, p.ParameterInfo, arg);
                     }
                 }
+            }
 
-                var httpResultTaskFunc = HttpRequestTaskFunc(actionContext, 0, () =>
-                {
+            var httpResultTaskFunc = HttpRequestTaskFunc(actionContext, 0, () =>
+            {
 
-                    return actionContext.MethodDescription.HttpResultConverter(
-                        EasyHttpClient.Utilities.TaskExtensions.Retry<HttpResponseMessage>(() =>
+                return actionContext.MethodDescription.HttpResultConverter(
+                    EasyHttpClient.Utilities.TaskExtensions.Retry<HttpResponseMessage>(() =>
+                    {
+                        actionContext.HttpRequestMessage = actionContext.HttpRequestMessageBuilder.Build();
+
+                        Task<HttpResponseMessage> httpRequestTask;
+                        if (actionContext.MethodDescription.AuthorizeRequired && _httpClientSettings.OAuth2ClientHandler != null)
                         {
-                            actionContext.HttpRequestMessage = actionContext.HttpRequestMessageBuilder.Build();
-
-                            Task<HttpResponseMessage> httpRequestTask;
-                            if (actionContext.MethodDescription.AuthorizeRequired && _httpClientSettings.OAuth2ClientHandler != null)
-                            {
-                                httpRequestTask = _httpClientSettings.OAuth2ClientHandler.SetAccessToken(actionContext.HttpRequestMessage)
-                                    .Then(() => doSendHttpRequestAsync(_httpClient, actionContext))
-                                    .Then(async response =>
+                            httpRequestTask = _httpClientSettings.OAuth2ClientHandler.SetAccessToken(actionContext.HttpRequestMessage)
+                                .Then(() => DoSendHttpRequestAsync(_httpClient, actionContext))
+                                .Then(async response =>
+                                {
+                                    if (response.StatusCode == HttpStatusCode.Unauthorized)
                                     {
-                                        if (response.StatusCode == HttpStatusCode.Unauthorized)
+                                        actionContext.HttpRequestMessage = actionContext.HttpRequestMessageBuilder.Build();
+                                        if (await _httpClientSettings.OAuth2ClientHandler.RefreshAccessToken(actionContext.HttpRequestMessage))
                                         {
-                                            actionContext.HttpRequestMessage = actionContext.HttpRequestMessageBuilder.Build();
-                                            if (await _httpClientSettings.OAuth2ClientHandler.RefreshAccessToken(actionContext.HttpRequestMessage))
-                                            {
-                                                response = await doSendHttpRequestAsync(_httpClient, actionContext);
-                                            }
+                                            response = await DoSendHttpRequestAsync(_httpClient, actionContext);
                                         }
-                                        return response;
-                                    });
-                            }
-                            else
-                            {
-                                httpRequestTask = doSendHttpRequestAsync(_httpClient, actionContext);
-                            }
-                            return httpRequestTask;
-                        }, (r) => Task.FromResult((int)r.StatusCode > 500 || r.StatusCode == HttpStatusCode.RequestTimeout), actionContext.MethodDescription.MaxRetry)
-                        , actionContext);
+                                    }
+                                    return response;
+                                });
+                        }
+                        else
+                        {
+                            httpRequestTask = DoSendHttpRequestAsync(_httpClient, actionContext);
+                        }
+                        return httpRequestTask;
+                    }, (r) => Task.FromResult((int)r.StatusCode > 500 || r.StatusCode == HttpStatusCode.RequestTimeout), actionContext.MethodDescription.MaxRetry)
+                    , actionContext);
 
-                });
+            });
 
-                return actionContext.MethodDescription.MethodResultConveter(methodCall, httpResultTaskFunc, actionContext);
-            }
-            catch (Exception ex)
-            {
-                return new ReturnMessage(ex, methodCall);
-            }
+            return actionContext.MethodDescription.MethodResultConveter(httpResultTaskFunc);
         }
 
         private Func<Task<IHttpResult>> HttpRequestTaskFunc(ActionContext context, int index, Func<Task<IHttpResult>> continuation)
@@ -271,7 +198,6 @@ namespace EasyHttpClient
             }
         }
 
-
         private static readonly Dictionary<MethodInfo, MethodDescription> MethodDescriptions = new Dictionary<MethodInfo, MethodDescription>();
 
         private MethodDescription GetMethodDescription(MethodInfo methodInfo)
@@ -284,19 +210,18 @@ namespace EasyHttpClient
                 {
                     if (!MethodDescriptions.TryGetValue(methodInfo, out methodDescription))
                     {
-
                         var routeAttribute = methodInfo.GetCustomAttribute<RouteAttribute>();
 
                         if (routeAttribute == null)
                         {
-                            throw new NotSupportedException(string.Format(MsgMissingSomethingOn, _objectType.ToString(), typeof(RouteAttribute).ToString(), methodInfo.ToString()));
+                            throw new NotSupportedException(string.Format(MsgMissingSomethingOn, methodInfo.DeclaringType.ToString(), typeof(RouteAttribute).ToString(), methodInfo.ToString()));
                         }
 
                         var httpMethodAttribute = methodInfo.GetCustomAttributes().FirstOrDefault(t => t is IHttpMethodAttribute) as IHttpMethodAttribute;
 
                         if (httpMethodAttribute == null)
                         {
-                            throw new NotSupportedException(string.Format(MsgMissingSomethingOn, _objectType.ToString(), typeof(IHttpMethodAttribute).ToString(), methodInfo.ToString()));
+                            throw new NotSupportedException(string.Format(MsgMissingSomethingOn, methodInfo.DeclaringType.ToString(), typeof(IHttpMethodAttribute).ToString(), methodInfo.ToString()));
                         }
 
                         var httpMethod = httpMethodAttribute.HttpMethod;
@@ -392,10 +317,10 @@ namespace EasyHttpClient
                                     methodDescription.ReturnTypeDescription.TargetObjectType = typeof(object);
                                 }
 
-                                methodDescription.MethodResultConveter = (methodCall, httpResultTask, actionContext) =>
+                                methodDescription.MethodResultConveter = (httpResultTask) =>
                                 {
                                     var result = CastHttpResultTaskMethod.MakeGenericMethod(taskObjectType).Invoke(null, new object[] { httpResultTask() });
-                                    return new ReturnMessage(result, new object[0], 0, methodCall.LogicalCallContext, methodCall);
+                                    return result;
                                 };
                             }
                             else
@@ -405,10 +330,10 @@ namespace EasyHttpClient
                                  * *************/
                                 methodDescription.ReturnTypeDescription.TargetObjectType = returnType.GenericTypeArguments[0];
 
-                                methodDescription.MethodResultConveter = (methodCall, httpResultTask, actionContext) =>
+                                methodDescription.MethodResultConveter = (httpResultTask) =>
                                 {
                                     var result = CastObjectTaskMethod.MakeGenericMethod(taskObjectType).Invoke(null, new object[] { httpResultTask() });
-                                    return new ReturnMessage(result, new object[0], 0, methodCall.LogicalCallContext, methodCall);
+                                    return result;
                                 };
                             }
                         }
@@ -421,15 +346,15 @@ namespace EasyHttpClient
                             var taskObjectType = typeof(void);
                             methodDescription.ReturnTypeDescription.TargetObjectType = typeof(object);
 
-                            methodDescription.MethodResultConveter = (methodCall, httpResultTask, actionContext) =>
+                            methodDescription.MethodResultConveter = (httpResultTask) =>
                             {
-                                return new ReturnMessage(httpResultTask().Then(t =>
+                                return httpResultTask().Then(t =>
                                 {
                                     if (!t.IsSuccessStatusCode)
                                     {
-                                        throw new HttpException((int)t.StatusCode, t.ReasonPhrase);
+                                        //TODO  throw new HttpException((int)t.StatusCode, t.ReasonPhrase);
                                     }
-                                }), new object[0], 0, methodCall.LogicalCallContext, methodCall);
+                                });
                             };
                         }
                         else if (typeof(IHttpResult).IsAssignableFrom(returnType))
@@ -450,10 +375,10 @@ namespace EasyHttpClient
                                 methodDescription.ReturnTypeDescription.HttpResultType = returnType.IsClass ? returnType : typeof(HttpResult<>);
                                 methodDescription.ReturnTypeDescription.TargetObjectType = typeof(object);
                             }
-                            methodDescription.MethodResultConveter = (methodCall, httpResultTask, actionContext) =>
+                            methodDescription.MethodResultConveter = (httpResultTask) =>
                             {
                                 var result = Task.Run(httpResultTask).Result;
-                                return new ReturnMessage(ObjectExtensions.ChangeType(result, returnType), new object[0], 0, methodCall.LogicalCallContext, methodCall);
+                                return ObjectExtensions.ChangeType(result, returnType);
                             };
                         }
                         else if (returnType == typeof(void))
@@ -464,14 +389,14 @@ namespace EasyHttpClient
                             var taskObjectType = typeof(void);
                             methodDescription.ReturnTypeDescription.TargetObjectType = typeof(object);
 
-                            methodDescription.MethodResultConveter = (methodCall, httpResultTask, actionContext) =>
+                            methodDescription.MethodResultConveter = (httpResultTask) =>
                             {
                                 var t = Task.Run(httpResultTask).Result;
                                 if (!t.IsSuccessStatusCode)
                                 {
-                                    throw new HttpException((int)t.StatusCode, t.ReasonPhrase);
+                                    //TODO throw new HttpException((int)t.StatusCode, t.ReasonPhrase);
                                 }
-                                return new ReturnMessage(null, new object[0], 0, methodCall.LogicalCallContext, methodCall);
+                                return null;
                             };
                         }
                         else
@@ -484,10 +409,10 @@ namespace EasyHttpClient
                             var taskObjectType = returnType;
                             methodDescription.ReturnTypeDescription.TargetObjectType = returnType;
 
-                            methodDescription.MethodResultConveter = (methodCall, httpResultTask, actionContext) =>
+                            methodDescription.MethodResultConveter = (httpResultTask) =>
                             {
                                 var result = Task.Run(httpResultTask).Result.Content;
-                                return new ReturnMessage(ObjectExtensions.ChangeType(result, returnType), new object[0], 0, methodCall.LogicalCallContext, methodCall);
+                                return ObjectExtensions.ChangeType(result, returnType);
                             };
                         }
 
@@ -504,7 +429,6 @@ namespace EasyHttpClient
             }
 
             return methodDescription;
-
         }
 
         private string[] ExtractParameterNames(string path)
@@ -521,6 +445,5 @@ namespace EasyHttpClient
             }
             return result.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         }
-
     }
 }

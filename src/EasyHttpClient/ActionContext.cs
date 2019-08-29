@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Reflection;
-using System.Runtime.Remoting.Messaging;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,7 +16,6 @@ namespace EasyHttpClient
     public class EmptyActionContext : ActionContext
     {
         public EmptyActionContext()
-            : base(new EmptyMethodCallMessage())
         {
             this.MethodDescription = new MethodDescription(this.MethodDescription.MethodInfo);
         }
@@ -27,14 +25,11 @@ namespace EasyHttpClient
     {
         public CancellationTokenSource CancellationToken { get; private set; }
 
-        internal ActionContext(IMethodCallMessage methodCallMessage)
+        internal ActionContext()
         {
-            this.MethodCallMessage = methodCallMessage;
             this.Properties = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
             this.CancellationToken = new CancellationTokenSource();
         }
-
-        public IMethodCallMessage MethodCallMessage { get; private set; }
 
         public HttpClientSettings HttpClientSettings
         {
@@ -55,11 +50,6 @@ namespace EasyHttpClient
         public ParameterDescription[] Parameters
         {
             get { return this.MethodDescription.Parameters; }
-        }
-        public IDictionary<string, object> ParameterValues
-        {
-            get;
-            internal set;
         }
 
         public IDictionary<string, object> Properties

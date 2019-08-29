@@ -16,7 +16,6 @@ namespace EasyHttpClient
         public Type ReturnType { get; internal set; }
         public Type TargetObjectType { get; internal set; }
         public IHttpResultDecoder HttpResultDecoder { get; internal set; }
-
         public Type HttpResultType { get; internal set; }
       }
 }

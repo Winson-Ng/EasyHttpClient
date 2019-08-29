@@ -10,6 +10,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
+using MimeMapping;
 
 namespace EasyHttpClient.Attributes
 {
@@ -59,7 +60,7 @@ namespace EasyHttpClient.Attributes
                     content.Headers.ContentDisposition = contentDisposition;
                     content.Headers.ContentDisposition.FileName = f.Name;
                     content.Headers.ContentDisposition.Name = dispositionName;
-                    content.Headers.ContentType = new MediaTypeHeaderValue(!string.IsNullOrWhiteSpace(this.ContentType) ? this.ContentType : MimeMapping.GetMimeMapping(f.Name));
+                    content.Headers.ContentType = new MediaTypeHeaderValue(!string.IsNullOrWhiteSpace(this.ContentType) ? this.ContentType : MimeUtility.GetMimeMapping(f.Name));
 
                     requestBuilder.RawContents.Add(content);
                 }
@@ -70,7 +71,7 @@ namespace EasyHttpClient.Attributes
                     content.Headers.ContentDisposition = contentDisposition;
                     content.Headers.ContentDisposition.FileName = f.Name;
                     content.Headers.ContentDisposition.Name = dispositionName;
-                    content.Headers.ContentType = new MediaTypeHeaderValue(!string.IsNullOrWhiteSpace(this.ContentType) ? this.ContentType : MimeMapping.GetMimeMapping(f.Name));
+                    content.Headers.ContentType = new MediaTypeHeaderValue(!string.IsNullOrWhiteSpace(this.ContentType) ? this.ContentType : MimeUtility.GetMimeMapping(f.Name));
 
                     requestBuilder.RawContents.Add(content);
                 }
@@ -81,7 +82,7 @@ namespace EasyHttpClient.Attributes
                     content.Headers.ContentDisposition = contentDisposition;
                     content.Headers.ContentDisposition.FileName = s.Name;
                     content.Headers.ContentDisposition.Name = dispositionName;
-                    content.Headers.ContentType = new MediaTypeHeaderValue(!string.IsNullOrWhiteSpace(this.ContentType) ? this.ContentType : MimeMapping.GetMimeMapping(s.Name));
+                    content.Headers.ContentType = new MediaTypeHeaderValue(!string.IsNullOrWhiteSpace(this.ContentType) ? this.ContentType : MimeUtility.GetMimeMapping(s.Name));
                     requestBuilder.RawContents.Add(content);
                 }
                 else

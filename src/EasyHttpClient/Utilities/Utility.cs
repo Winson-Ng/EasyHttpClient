@@ -12,6 +12,7 @@ using EasyHttpClient.Attributes;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.IO;
+using MimeMapping;
 
 namespace EasyHttpClient.Utilities
 {
@@ -132,7 +133,7 @@ namespace EasyHttpClient.Utilities
                     content.Headers.ContentDisposition.FileName = Path.GetFileName(f.LocalFileName);
                 }
 
-                content.Headers.ContentType = new MediaTypeHeaderValue(MimeMapping.GetMimeMapping(f.LocalFileName));
+                content.Headers.ContentType = new MediaTypeHeaderValue(MimeUtility.GetMimeMapping(f.LocalFileName));
                 kps.Add(content);
             }
             else if (value is FileInfo)
@@ -142,7 +143,7 @@ namespace EasyHttpClient.Utilities
                 content.Headers.ContentDisposition = new ContentDispositionHeaderValue(defaultContentDisposition);
                 content.Headers.ContentDisposition.FileName = f.Name;
                 content.Headers.ContentDisposition.Name = quotedName;
-                content.Headers.ContentType = new MediaTypeHeaderValue(MimeMapping.GetMimeMapping(f.Name));
+                content.Headers.ContentType = new MediaTypeHeaderValue(MimeUtility.GetMimeMapping(f.Name));
                 kps.Add(content);
             }
             else if (value is FileStream)
@@ -152,7 +153,7 @@ namespace EasyHttpClient.Utilities
                 content.Headers.ContentDisposition = new ContentDispositionHeaderValue(defaultContentDisposition);
                 content.Headers.ContentDisposition.FileName = s.Name;
                 content.Headers.ContentDisposition.Name = quotedName;
-                content.Headers.ContentType = new MediaTypeHeaderValue(MimeMapping.GetMimeMapping(s.Name));
+                content.Headers.ContentType = new MediaTypeHeaderValue(MimeUtility.GetMimeMapping(s.Name));
                 kps.Add(content);
             }
             else if (value is Stream)

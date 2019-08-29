@@ -17,7 +17,6 @@ namespace EasyHttpClient
 {
     public class HttpClientSettings
     {
-
         private static readonly Func<JsonSerializerSettings> DefaultJsonSerializerSettings = () => new JsonSerializerSettings()
         {
             NullValueHandling = NullValueHandling.Ignore,
@@ -43,22 +42,8 @@ namespace EasyHttpClient
         /// </summary>
         public TimeSpan Timeout { get; set; }
         public int MaxRetry { get; set; }
-        //private JsonSerializerSettings _jsonSerializerSettings;
-        public JsonSerializerSettings JsonSerializerSettings
-        {
-            get
-            {
-                return this.JsonMediaTypeFormatter.SerializerSettings;
-            }
-            set
-            {
-                this.JsonMediaTypeFormatter.SerializerSettings = value;
-                //this.JsonMediaTypeFormatter.SerializerSettings = value;
-            }
-        }
-
+        public JsonSerializerSettings JsonSerializerSettings { get; set; }
         public JsonMediaTypeFormatter JsonMediaTypeFormatter { get; private set; }
-
         public IHttpResultDecoder HttpResultDecoder { get; set; }
         /// <summary>
         /// To handle non json http request parameter datetime formatting, and it can be overrided by [StringFormatAttribute("format")]
@@ -68,12 +53,11 @@ namespace EasyHttpClient
         public HttpClientSettings()
         {
             this.AutomaticDecompression = true;
+            this.JsonSerializerSettings = DefaultJsonSerializerSettings();
             this.JsonMediaTypeFormatter = new JsonMediaTypeFormatter()
             {
-                SerializerSettings = DefaultJsonSerializerSettings()
+                SerializerSettings = this.JsonSerializerSettings
             };
-            //this.HttpResultDecoder = DefaultHttpResultDecoder;
-            //this.JsonSerializerSettings = DefaultJsonSerializerSettings;
             this.ActionFilters = new List<IActionFilter>();
             this.DelegatingHandlers = new List<Func<DelegatingHandler>>();
             this.Timeout = TimeSpan.FromMilliseconds(100000);
