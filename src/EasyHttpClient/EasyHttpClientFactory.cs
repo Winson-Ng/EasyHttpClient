@@ -30,7 +30,7 @@ namespace EasyHttpClient
             var methodExcutor = new ProxyMethodExecutor(Config);
             IProxyFactory proxyFactory;
 #if NET472
-             proxyFactory=new RealProxyFactory(typeof(T));
+            proxyFactory = new RealProxyFactory(typeof(T));
 #else
             proxyFactory = new ReflectionProxyFactory();
 #endif
